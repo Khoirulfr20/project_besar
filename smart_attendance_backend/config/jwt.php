@@ -1,0 +1,76 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | JWT Authentication Secret
+    |--------------------------------------------------------------------------
+    */
+    'secret' => env('JWT_SECRET'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | JWT time to live
+    |--------------------------------------------------------------------------
+    | Specify the length of time (in minutes) that the token will be valid for.
+    | Defaults to 1 hour (60 minutes).
+    */
+    'ttl' => env('JWT_TTL', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Refresh time to live
+    |--------------------------------------------------------------------------
+    | Specify the length of time (in minutes) that the token can be refreshed
+    | within. I.E. The user can refresh their token within a 2 week window of
+    | the original token being created until they must re-authenticate.
+    | Defaults to 2 weeks (20160 minutes).
+    */
+    'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),
+
+    /*
+    |--------------------------------------------------------------------------
+    | JWT hashing algorithm
+    |--------------------------------------------------------------------------
+    */
+    'algo' => env('JWT_ALGO', 'HS256'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Required Claims
+    |--------------------------------------------------------------------------
+    */
+    'required_claims' => [
+        'iss',
+        'iat',
+        'exp',
+        'nbf',
+        'sub',
+        'jti',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Blacklist Enabled
+    |--------------------------------------------------------------------------
+    */
+    'blacklist_enabled' => env('JWT_BLACKLIST_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Blacklist Grace Period
+    |--------------------------------------------------------------------------
+    */
+    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Providers
+    |--------------------------------------------------------------------------
+    */
+    'providers' => [
+        'jwt' => Tymon\JWTAuth\Providers\JWT\Lcobucci::class,
+        'auth' => Tymon\JWTAuth\Providers\Auth\Illuminate::class,
+        'storage' => Tymon\JWTAuth\Providers\Storage\Illuminate::class,
+    ],
+];

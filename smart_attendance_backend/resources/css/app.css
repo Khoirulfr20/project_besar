@@ -1,0 +1,23 @@
+/* Pastikan body tidak tertutup navbar */
+body {
+    padding-top: 56px; /* Tinggi navbar bootstrap fixed-top */
+}
+
+/* Jaga agar navbar tidak terpengaruh sidebar */
+.navbar.fixed-top {
+    width: 100%;
+    left: 0;
+    right: 0;
+    top: 0;
+    position: fixed;
+}
+
+.nav-link {
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover {
+    background-color: #0d6efd;
+    color: #fff !important;
+    border-radius: 0.375rem;
+}
