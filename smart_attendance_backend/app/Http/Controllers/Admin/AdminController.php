@@ -149,6 +149,14 @@ class AdminController extends Controller
         $users = User::where('is_active', true)->get();
         return view('admin.schedules.create', compact('users'));
     }
+
+    // Edit - Menampilkan form edit schedule
+    public function schedulesEdit($id)
+    {
+        $schedule = Schedule::findOrFail($id);
+        
+        return view('admin.schedules.edit', compact('schedule'));
+    }
     
     public function schedulesStore(Request $request)
     {
@@ -179,6 +187,38 @@ class AdminController extends Controller
         }
         
         return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil ditambahkan');
+    }
+
+    public function schedulesUpdate(Request $request, $id)
+    {
+        $schedule = Schedule::findOrFail($id);
+        
+        // Validasi
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required|after:start_time',
+            'location' => 'required|string|max:255',
+            'type' => 'required|in:meeting,training,event,other',
+            'status' => 'required|in:scheduled,ongoing,completed,cancelled',
+        ]);
+        
+        // Update data
+        $schedule->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'date' => $request->date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'location' => $request->location,
+            'type' => $request->type,
+            'status' => $request->status,
+        ]);
+        
+        return redirect()->route('admin.schedules.index')
+            ->with('success', 'Schedule berhasil diperbarui');
     }
     
     public function schedulesDestroy($id)

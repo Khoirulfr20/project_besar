@@ -20,7 +20,7 @@ class PermissionsHelper {
     return await Permission.camera.isGranted;
   }
 
-  static Future<void> openAppSettingsPage() async {
-    await openAppSettings(); // ✅ ganti nama fungsi agar tidak bentrok
+  static Future<void> openAppSettings() async {
+    await openAppSettings();
   }
 }

@@ -1,7 +1,7 @@
 class AppConfig {
   // API Configuration
   static const String baseUrl =
-      'http://192.168.250.236:8000/api'; // Ganti dengan IP server Laravel Anda
+      'http:///10.222.138.186:8000/api'; // Ganti dengan IP server Laravel Anda
 
   // App Information
   static const String appName = 'Smart Attendance';

@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Admin & Pimpinan only
         Route::middleware('role:admin,pimpinan')->group(function () {
             Route::post('/', [ScheduleController::class, 'store']);
+            Route::get('/users-list', [UserController::class, 'getUsersList']);
             Route::put('/{id}', [ScheduleController::class, 'update']);
             Route::delete('/{id}', [ScheduleController::class, 'destroy']);
         });

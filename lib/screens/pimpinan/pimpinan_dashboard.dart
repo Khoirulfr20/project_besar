@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_attendance/screens/anggota/history_screen.dart';
+import 'package:smart_attendance/screens/pimpinan/export_report_screen.dart';
 import 'package:smart_attendance/screens/pimpinan/schedule_create_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
@@ -349,11 +351,35 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
           ),
         ),
         const SizedBox(height: 16),
+        // Additional Menu Items
         Card(
-          child: ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: _handleLogout,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Histori Kehadiran'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const HistoryScreen(),
+                      ));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: const Text('Export Laporan'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ExportReportScreen(),
+                      ));
+                },
+              ),
+            ],
           ),
         ),
       ],
