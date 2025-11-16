@@ -42,7 +42,6 @@ class _AnggotaDashboardState extends State<AnggotaDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar hanya tampil di tab Home (index 0) dan Profile (index 3)
       appBar: (_selectedIndex == 0 || _selectedIndex == 3)
           ? AppBar(
               title:
@@ -53,10 +52,6 @@ class _AnggotaDashboardState extends State<AnggotaDashboard> {
                   onPressed: () {
                     Navigator.pushNamed(context, '/notifications');
                   },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  onPressed: () => _handleLogout(),
                 ),
               ],
             )
@@ -369,6 +364,13 @@ class _AnggotaDashboardState extends State<AnggotaDashboard> {
                 leading: const Icon(Icons.business_outlined),
                 title: const Text('Departemen'),
                 subtitle: Text(user?.department ?? '-'),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title:
+                    const Text('Logout', style: TextStyle(color: Colors.red)),
+                onTap: _handleLogout,
               ),
             ],
           ),

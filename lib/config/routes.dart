@@ -5,9 +5,6 @@ import '../screens/anggota/anggota_dashboard.dart';
 import '../screens/anggota/schedule_view_screen.dart';
 import '../screens/anggota/history_screen.dart' as anggota;
 import '../screens/pimpinan/pimpinan_dashboard.dart';
-import '../screens/pimpinan/schedule_list_screen.dart';
-import '../screens/pimpinan/schedule_create_screen.dart';
-import '../screens/pimpinan/record_attendance_screen.dart';
 import '../screens/pimpinan/attendance_report_screen.dart';
 import '../screens/pimpinan/export_report_screen.dart';
 import '../screens/pimpinan/history_screen.dart' as pimpinan;
@@ -23,9 +20,6 @@ class Routes {
   static const String notifications = '/notifications';
   static const String scheduleView = '/schedule-view';
   static const String anggotaHistory = '/anggota-history';
-  static const String scheduleList = '/schedule-list';
-  static const String scheduleCreate = '/schedule-create';
-  static const String recordAttendance = '/record-attendance';
   static const String attendanceReport = '/attendance-report';
   static const String exportReport = '/export-report';
   static const String pimpinanHistory = '/pimpinan-history';
@@ -56,17 +50,6 @@ class AppRoutes {
 
       case Routes.anggotaHistory:
         return MaterialPageRoute(builder: (_) => const anggota.HistoryScreen());
-
-      case Routes.scheduleList:
-        return MaterialPageRoute(builder: (_) => const ScheduleListScreen());
-
-      case Routes.scheduleCreate:
-        return MaterialPageRoute(builder: (_) => const ScheduleCreateScreen());
-
-      case Routes.recordAttendance:
-        return MaterialPageRoute(
-          builder: (_) => const RecordAttendanceScreen(),
-        );
 
       case Routes.attendanceReport:
         return MaterialPageRoute(

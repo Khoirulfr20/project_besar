@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:smart_attendance/screens/anggota/history_screen.dart';
-import 'package:smart_attendance/screens/pimpinan/export_report_screen.dart';
-import 'package:smart_attendance/screens/pimpinan/schedule_create_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/schedule_provider.dart';
-import 'schedule_list_screen.dart';
-import 'record_attendance_screen.dart';
-import 'attendance_report_screen.dart';
+import '../pimpinan/schedule_view_screen.dart';
+import '../pimpinan/attendance_report_screen.dart';
+import '../pimpinan/history_screen.dart';
+import '../../screens/face/face_capture_screen.dart';
 
 class PimpinanDashboard extends StatefulWidget {
   const PimpinanDashboard({super.key});
@@ -41,84 +39,78 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
   }
 
   void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
+    if (index == 2) {
+      // Face Capture di tengah - navigate langsung
+      final todayAttendance =
+          Provider.of<AttendanceProvider>(context, listen: false)
+              .todayAttendance;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FaceCaptureScreen(
+            isCheckOut: todayAttendance?.hasCheckedIn ?? false,
+          ),
+        ),
+      ).then((_) => _loadData());
+    } else {
+      setState(() => _selectedIndex = index);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        actions: [
-          // 🔹 Tombol notifikasi hanya muncul di Dashboard (index 0)
-          if (_selectedIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () => Navigator.pushNamed(context, '/notifications'),
-            ),
-
-          // 🔹 Tombol tambah (+) khusus untuk tab Jadwal (index 1)
-          if (_selectedIndex == 1)
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ScheduleCreateScreen(),
-                  ),
-                );
-
-                // 🔁 Jika berhasil menambah jadwal, perbarui tampilan
-                if (result == true) {
-                  setState(() {});
-                }
-              },
-            ),
-
-          // 🔹 Logout hanya muncul di tab Dashboard (index 0)
-          if (_selectedIndex == 0)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _handleLogout,
-            ),
-        ],
-      ),
+      appBar: _selectedIndex == 0
+          ? AppBar(
+              title: const Text('Dashboard Pimpinan'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/notifications'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_outline),
+                  onPressed: () => _showProfileBottomSheet(),
+                ),
+              ],
+            )
+          : null,
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: _selectedIndex == 2
+            ? 0
+            : _selectedIndex > 2
+                ? _selectedIndex - 1
+                : _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
+        selectedFontSize: 12,
+        unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), label: 'Dashboard'),
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today), label: 'Jadwal'),
+            icon: Icon(Icons.calendar_today),
+            label: 'Jadwal',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.checklist), label: 'Kehadiran'),
+            icon: Icon(Icons.face_retouching_natural),
+            label: 'Rekam Absen',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.analytics), label: 'Laporan'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            icon: Icon(Icons.analytics),
+            label: 'Laporan',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'Histori',
+          ),
         ],
       ),
     );
-  }
-
-  String _getAppBarTitle() {
-    switch (_selectedIndex) {
-      case 0:
-        return 'Dashboard Pimpinan';
-      case 1:
-        return 'Kelola Jadwal';
-      case 2:
-        return 'Kelola Kehadiran';
-      case 3:
-        return 'Laporan Kehadiran';
-      case 4:
-        return 'Profile';
-      default:
-        return 'Dashboard Pimpinan';
-    }
   }
 
   Widget _buildBody() {
@@ -126,13 +118,13 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
       case 0:
         return _buildDashboard();
       case 1:
-        return const ScheduleListScreen();
+        return const PimpinanScheduleViewScreen();
       case 2:
-        return const RecordAttendanceScreen();
+        return _buildDashboard(); // Face capture di handle di onTap
       case 3:
         return const AttendanceReportScreen();
       case 4:
-        return _buildProfile();
+        return const HistoryScreen();
       default:
         return _buildDashboard();
     }
@@ -147,7 +139,6 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Welcome Card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -183,8 +174,6 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Statistics Cards
           Text('Statistik Bulan Ini',
               style: Theme.of(context)
                   .textTheme
@@ -215,8 +204,6 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Attendance Rate
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -243,8 +230,6 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Quick Actions
           Text('Menu Cepat',
               style: Theme.of(context)
                   .textTheme
@@ -258,12 +243,14 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
             children: [
-              _buildQuickActionCard(Icons.event_note, 'Kelola\nJadwal',
+              _buildQuickActionCard(Icons.calendar_today, 'Jadwal',
                   () => setState(() => _selectedIndex = 1)),
-              _buildQuickActionCard(Icons.checklist, 'Kelola\nKehadiran',
-                  () => setState(() => _selectedIndex = 2)),
+              _buildQuickActionCard(Icons.face_retouching_natural,
+                  'Rekam\nAbsen', () => _onItemTapped(2)),
               _buildQuickActionCard(Icons.analytics, 'Laporan',
                   () => setState(() => _selectedIndex = 3)),
+              _buildQuickActionCard(Icons.history, 'Histori',
+                  () => setState(() => _selectedIndex = 4)),
             ],
           ),
         ],
@@ -299,90 +286,83 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
             const SizedBox(height: 8),
             Text(label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11)),
+                style: const TextStyle(fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfile() {
-    final user = Provider.of<AuthProvider>(context).user;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Center(
-          child: CircleAvatar(
-            radius: 50,
-            backgroundImage:
-                user?.photo != null ? NetworkImage(user!.photo!) : null,
-            child:
-                user?.photo == null ? const Icon(Icons.person, size: 50) : null,
-          ),
+  void _showProfileBottomSheet() {
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(height: 16),
-        Text(user?.name ?? '',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge),
-        Text(user?.position ?? '',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 24),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage:
+                      user?.photo != null ? NetworkImage(user!.photo!) : null,
+                  child: user?.photo == null
+                      ? const Icon(Icons.person, size: 40)
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text(user?.name ?? '',
+                    style: Theme.of(context).textTheme.titleLarge),
+                Text(user?.position ?? '',
+                    style: Theme.of(context).textTheme.bodyMedium),
+                const Divider(height: 32),
+                ListTile(
                   leading: const Icon(Icons.badge),
                   title: const Text('ID Karyawan'),
-                  subtitle: Text(user?.employeeId ?? '')),
-              ListTile(
+                  subtitle: Text(user?.employeeId ?? ''),
+                ),
+                ListTile(
                   leading: const Icon(Icons.email),
                   title: const Text('Email'),
-                  subtitle: Text(user?.email ?? '')),
-              ListTile(
+                  subtitle: Text(user?.email ?? ''),
+                ),
+                ListTile(
                   leading: const Icon(Icons.phone),
                   title: const Text('Telepon'),
-                  subtitle: Text(user?.phone ?? '-')),
-              ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Departemen'),
-                  subtitle: Text(user?.department ?? '-')),
-            ],
+                  subtitle: Text(user?.phone ?? '-'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title:
+                      const Text('Logout', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _handleLogout();
+                  },
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        // Additional Menu Items
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('Histori Kehadiran'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const HistoryScreen(),
-                      ));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.download),
-                title: const Text('Export Laporan'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ExportReportScreen(),
-                      ));
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -405,9 +385,7 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
 
     if (confirmed ?? false) {
       await Provider.of<AuthProvider>(context, listen: false).logout();
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 }

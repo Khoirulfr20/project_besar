@@ -124,4 +124,6 @@ class Schedule {
         return status;
     }
   }
+
+  getDurationInMinutes() {}
 }
