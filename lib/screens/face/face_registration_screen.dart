@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../services/camera_service.dart';
 import '../../services/face_recognition_service.dart';
 import 'package:http/http.dart' as http;
@@ -26,6 +27,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   int _sampleCount = 0;
   final int _requiredSamples = 3;
   final List<String> _capturedEmbeddings = [];
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -33,12 +35,52 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
     _initializeCamera();
   }
 
+  /// ✅ INITIALIZE CAMERA DENGAN PERMISSION CHECK
   Future<void> _initializeCamera() async {
     try {
+      // Cek permission terlebih dahulu
+      final cameraStatus = await Permission.camera.status;
+
+      if (cameraStatus.isDenied) {
+        final result = await Permission.camera.request();
+
+        if (result.isDenied) {
+          setState(() {
+            _errorMessage =
+                'Akses kamera ditolak. Silakan berikan izin kamera.';
+          });
+          return;
+        }
+
+        if (result.isPermanentlyDenied) {
+          setState(() {
+            _errorMessage =
+                'Akses kamera ditolak secara permanen. Silakan aktifkan di pengaturan.';
+          });
+          return;
+        }
+      }
+
+      if (cameraStatus.isPermanentlyDenied) {
+        setState(() {
+          _errorMessage =
+              'Akses kamera ditolak secara permanen. Silakan aktifkan di pengaturan.';
+        });
+        return;
+      }
+
+      // Setelah permission OK, baru initialize camera
       await _cameraService.initialize();
-      setState(() => _isInitialized = true);
+
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      }
     } catch (e) {
-      _showError('Gagal mengakses kamera: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Gagal mengakses kamera: $e';
+        });
+      }
     }
   }
 
@@ -70,18 +112,23 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
       await _uploadFaceData(imagePath, embedding, quality);
 
       _capturedEmbeddings.add(embedding.join(','));
-      setState(() => _sampleCount++);
+
+      if (mounted) {
+        setState(() => _sampleCount++);
+      }
 
       _showSuccess('Sample $_sampleCount/$_requiredSamples berhasil diambil');
 
       if (_sampleCount >= _requiredSamples) {
         await Future.delayed(const Duration(seconds: 1));
-        Navigator.pop(context, true);
+        if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
       _showError(e.toString());
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -90,7 +137,6 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
     final token = _storage.getString('token');
     final uri = Uri.parse('${AppConfig.baseUrl}/face-data');
 
-    // Gunakan jsonEncode dari 'dart:convert' untuk debug/logging
     final jsonData = jsonEncode({
       'user_id': widget.userId,
       'embedding': embedding,
@@ -113,15 +159,24 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+    }
+  }
+
+  /// ✅ TAMBAHKAN TOMBOL BUKA SETTINGS
+  void _openSettings() async {
+    await openAppSettings();
   }
 
   @override
@@ -130,71 +185,110 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Registrasi Wajah')),
-      body: !_isInitialized
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
+      body: _errorMessage != null
+          ? _buildErrorView()
+          : !_isInitialized
+              ? const Center(child: CircularProgressIndicator())
+              : _buildCameraView(progress),
+    );
+  }
+
+  /// ✅ ERROR VIEW WITH SETTINGS BUTTON
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.camera_alt_outlined, size: 80, color: Colors.grey),
+            const SizedBox(height: 24),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _openSettings,
+              icon: const Icon(Icons.settings),
+              label: const Text('Buka Pengaturan'),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                setState(() => _errorMessage = null);
+                _initializeCamera();
+              },
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraView(double progress) {
+    return Stack(
+      children: [
+        Positioned.fill(child: CameraPreview(_cameraService.controller!)),
+
+        // Header
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.black54,
+            child: Column(
               children: [
-                Positioned.fill(
-                    child: CameraPreview(_cameraService.controller!)),
-
-                // Header
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.black54,
-                    child: Column(
-                      children: [
-                        Text(
-                          'Sample $_sampleCount/$_requiredSamples',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(value: progress, minHeight: 6),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Ambil foto dari sudut berbeda',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
+                Text(
+                  'Sample $_sampleCount/$_requiredSamples',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
                 ),
-
-                // Capture button
-                Positioned(
-                  bottom: 40,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: _captureSample,
-                      child: Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isProcessing ? Colors.grey : Colors.white,
-                          border: Border.all(color: Colors.white, width: 4),
-                        ),
-                        child: _isProcessing
-                            ? const Padding(
-                                padding: EdgeInsets.all(16),
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 3),
-                              )
-                            : const Icon(Icons.camera, size: 35),
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(value: progress, minHeight: 6),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ambil foto dari sudut berbeda',
+                  style: TextStyle(color: Colors.white70),
                 ),
               ],
             ),
+          ),
+        ),
+
+        // Capture button
+        Positioned(
+          bottom: 40,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: GestureDetector(
+              onTap: _captureSample,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isProcessing ? Colors.grey : Colors.white,
+                  border: Border.all(color: Colors.white, width: 4),
+                ),
+                child: _isProcessing
+                    ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(strokeWidth: 3),
+                      )
+                    : const Icon(Icons.camera, size: 35),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

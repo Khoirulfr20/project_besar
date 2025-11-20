@@ -45,6 +45,51 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * ✅ NEW METHOD: Get simple users list (for dropdown/filter)
+     * Accessible by Admin & Pimpinan
+     * No pagination, returns all active users
+     */
+    public function getUsersList(Request $request)
+    {
+        try {
+            $query = User::select('id', 'employee_id', 'name', 'role', 'department', 'position')
+                ->where('is_active', true);
+
+            // Filter by role if specified
+            if ($request->has('role')) {
+                $query->where('role', $request->role);
+            }
+
+            // Filter by department if specified
+            if ($request->has('department')) {
+                $query->where('department', $request->department);
+            }
+
+            // Search by name or employee_id
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            }
+
+            // Get all users without pagination for dropdown
+            $users = $query->orderBy('name')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $users
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data user: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [

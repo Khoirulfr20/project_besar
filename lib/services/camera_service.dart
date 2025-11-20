@@ -2,15 +2,31 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraService {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
 
+  /// Initialize camera with permission check
   Future<void> initialize() async {
+    // ✅ CEK PERMISSION DULU!
+    final cameraStatus = await Permission.camera.status;
+
+    if (cameraStatus.isDenied || cameraStatus.isPermanentlyDenied) {
+      final result = await Permission.camera.request();
+
+      if (!result.isGranted) {
+        throw Exception(
+            'Akses kamera ditolak. Silakan aktifkan di pengaturan aplikasi.');
+      }
+    }
+
+    // Setelah permission granted, baru ambil cameras
     _cameras = await availableCameras();
-    if (_cameras!.isEmpty) {
-      throw Exception('No cameras available');
+
+    if (_cameras == null || _cameras!.isEmpty) {
+      throw Exception('Tidak ada kamera yang tersedia');
     }
 
     // Use front camera for face recognition
@@ -26,7 +42,11 @@ class CameraService {
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
 
-    await _controller!.initialize();
+    try {
+      await _controller!.initialize();
+    } catch (e) {
+      throw Exception('Gagal menginisialisasi kamera: $e');
+    }
   }
 
   CameraController? get controller => _controller;

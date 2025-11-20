@@ -7,7 +7,7 @@ import '../../services/attendance_service.dart';
 import 'export_report_screen.dart';
 
 class AttendanceReportScreen extends StatefulWidget {
-  const AttendanceReportScreen({Key? key}) : super(key: key);
+  const AttendanceReportScreen({super.key});
 
   @override
   State<AttendanceReportScreen> createState() => _AttendanceReportScreenState();
@@ -166,7 +166,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
 
   Widget _summaryCard(String label, String value, Color color) {
     return Card(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

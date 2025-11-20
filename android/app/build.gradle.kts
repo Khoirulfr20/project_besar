@@ -1,63 +1,65 @@
 plugins {
-    id "com.android.application"
-    id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("dev.flutter.flutter-gradle-plugin")
 }
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
+    localPropertiesFile.reader(Charsets.UTF_8).use { reader ->
         localProperties.load(reader)
     }
 }
 
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
-}
+var flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+var flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
 
 android {
-    namespace "com.example.smart_attendance"
-    compileSdk 34
-    ndkVersion flutter.ndkVersion
+    namespace = "com.example.smart_attendance"
+
+    // WAJIB DIUPDATE → SDK 36
+    compileSdk = 36
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = "1.8"
     }
 
     sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        getByName("main").java.srcDirs("src/main/kotlin")
     }
 
     defaultConfig {
-        applicationId "com.example.smart_attendance"
-        minSdk 21
-        targetSdk 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        multiDexEnabled true
+        applicationId = "com.example.smart_attendance"
+
+        // tetap gunakan minSdk dari Flutter
+        minSdk = flutter.minSdkVersion
+
+        // WAJIB DIUPDATE → SDK 36
+        targetSdk = 36
+
+        versionCode = flutterVersionCode.toInt()
+        versionName = flutterVersionName
+        multiDexEnabled = true
     }
 
     buildTypes {
-        release {
-            signingConfig signingConfigs.debug
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
 
 flutter {
-    source '../..'
+    source = "../.."
 }
 
 dependencies {}

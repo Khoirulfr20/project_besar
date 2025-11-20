@@ -38,9 +38,10 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
     ]);
   }
 
+  // ✅ FIX: Logika index yang benar
   void _onItemTapped(int index) {
     if (index == 2) {
-      // Face Capture di tengah - navigate langsung
+      // Face Capture di tengah - navigate langsung, jangan ubah _selectedIndex
       final todayAttendance =
           Provider.of<AttendanceProvider>(context, listen: false)
               .todayAttendance;
@@ -52,7 +53,9 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
           ),
         ),
       ).then((_) => _loadData());
+      // ✅ TIDAK ubah _selectedIndex, jadi tetap di halaman sebelumnya
     } else {
+      // ✅ Update selectedIndex untuk tab lain
       setState(() => _selectedIndex = index);
     }
   }
@@ -78,11 +81,8 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
           : null,
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex == 2
-            ? 0
-            : _selectedIndex > 2
-                ? _selectedIndex - 1
-                : _selectedIndex,
+        // ✅ FIX: currentIndex yang benar
+        currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         selectedFontSize: 12,
@@ -113,6 +113,7 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
     );
   }
 
+  // ✅ FIX: _buildBody yang benar
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
@@ -120,7 +121,8 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
       case 1:
         return const PimpinanScheduleViewScreen();
       case 2:
-        return _buildDashboard(); // Face capture di handle di onTap
+        // Rekam Absen - tetap tampilkan dashboard karena sudah navigate di onTap
+        return _buildDashboard();
       case 3:
         return const AttendanceReportScreen();
       case 4:

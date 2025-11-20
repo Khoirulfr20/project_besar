@@ -45,7 +45,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Admin & Pimpinan only
         Route::middleware('role:admin,pimpinan')->group(function () {
             Route::post('/', [ScheduleController::class, 'store']);
-            Route::get('/users-list', [UserController::class, 'getUsersList']);
             Route::put('/{id}', [ScheduleController::class, 'update']);
             Route::delete('/{id}', [ScheduleController::class, 'destroy']);
         });
@@ -76,6 +75,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/summary', [ReportController::class, 'summary']);
         Route::get('/{id}/download', [ReportController::class, 'download']);
     });
+
+    // ✅ FIX: User List untuk Pimpinan (untuk filter dropdown)
+    Route::get('/users/list', [UserController::class, 'getUsersList'])
+        ->middleware('role:admin,pimpinan');
 
     // User Management Routes (Admin only)
     Route::prefix('users')->middleware('role:admin')->group(function () {
