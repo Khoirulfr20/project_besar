@@ -1,36 +1,39 @@
 {{-- ============================================ --}}
 {{-- File: resources/views/layouts/sidebar.blade.php --}}
 {{-- ============================================ --}}
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse border-end min-vh-100">
-    <div class="position-sticky pt-3">
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+    <div class="sidebar-sticky pt-3">
         <ul class="nav flex-column">
-            {{-- Dashboard --}}
-            <li class="nav-item mb-1">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.dashboard') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" 
                    href="{{ route('admin.dashboard') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i> 
-                    <span>Dashboard</span>
-                </a>
-            </li>
-
-            {{-- Kelola Pengguna --}}
-            <li class="nav-item mb-1">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.users.*') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
-                   href="{{ route('admin.users.index') }}">
-                    <i class="fas fa-users me-2"></i>
-                    <span>Kelola Pengguna</span>
-                </a>
-            </li>
-
-            {{-- Kelola Jadwal --}}
-            <li class="nav-item mb-1">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.schedules.*') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
-                   href="{{ route('admin.schedules.index') }}">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    <span>Kelola Jadwal</span>
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
             </li>
             
+            <!-- Kelola Pengguna -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" 
+                   href="{{ route('admin.users.index') }}">
+                    <i class="fas fa-users"></i> Kelola Pengguna
+                </a>
+            </li>
+            
+            <!-- Kelola Jadwal -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.schedules.*') ? 'active' : '' }}" 
+                   href="{{ route('admin.schedules.index') }}">
+                    <i class="fas fa-calendar-alt"></i> Kelola Jadwal
+                </a>
+            </li>
+            
+            <!-- Divider -->
+            <hr class="my-2">
+            <li class="nav-item">
+                <small class="text-muted ps-3">KEHADIRAN</small>
+            </li>
+
             {{-- Catat Kehadiran --}}
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('admin.attendance.record') ? 'active' : '' }}" 
@@ -38,33 +41,48 @@
                     <i class="fas fa-user-check"></i> Record Attendance
                 </a>
             </li>
-
-            {{-- Kelola Kehadiran --}}
-            <li class="nav-item mb-1">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.attendances.*') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
+            
+            <!-- Kelola Kehadiran (Real-time) -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.attendances.index') ? 'active' : '' }}" 
                    href="{{ route('admin.attendances.index') }}">
-                    <i class="fas fa-clipboard-check me-2"></i>
-                    <span>Kelola Kehadiran</span>
+                    <i class="fas fa-clipboard-check"></i> Kelola Kehadiran
                 </a>
             </li>
-
-            {{-- Histori Kehadiran --}}
-            <li class="nav-item mb-1">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.history.*') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
+            
+            <!-- Laporan Kehadiran (Report & Export) -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" 
+                   href="{{ route('admin.reports.attendance') }}">
+                    <i class="fas fa-chart-bar"></i> Laporan Kehadiran
+                </a>
+            </li>
+            
+            <!-- Histori Kehadiran -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.history.*') ? 'active' : '' }}" 
                    href="{{ route('admin.history.index') }}">
-                    <i class="fas fa-history me-2"></i>
-                    <span>Histori Kehadiran</span>
+                    <i class="fas fa-history"></i> Histori Kehadiran
                 </a>
             </li>
-
-            {{-- Pengaturan --}}
-            <li class="nav-item mt-2 border-top pt-2">
-                <a class="nav-link d-flex align-items-center px-3 py-2 {{ request()->routeIs('admin.settings.*') ? 'active bg-primary text-white rounded' : 'text-dark' }}" 
+            
+            <!-- Divider -->
+            <hr class="my-2">
+            
+            <!-- Pengaturan -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" 
                    href="{{ route('admin.settings.index') }}">
-                    <i class="fas fa-cog me-2"></i>
-                    <span>Pengaturan</span>
+                    <i class="fas fa-cog"></i> Pengaturan
                 </a>
             </li>
         </ul>
+        
+        <!-- Version Info -->
+        <div class="position-absolute bottom-0 start-0 p-3 w-100">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> v1.0.0
+            </small>
+        </div>
     </div>
 </nav>

@@ -5,8 +5,6 @@ import '../screens/anggota/anggota_dashboard.dart';
 import '../screens/anggota/schedule_view_screen.dart';
 import '../screens/anggota/history_screen.dart' as anggota;
 import '../screens/pimpinan/pimpinan_dashboard.dart';
-import '../screens/pimpinan/attendance_report_screen.dart';
-import '../screens/pimpinan/export_report_screen.dart';
 import '../screens/pimpinan/history_screen.dart' as pimpinan;
 import '../screens/common/notifications_screen.dart';
 import '../screens/face/face_capture_screen.dart';
@@ -50,14 +48,6 @@ class AppRoutes {
 
       case Routes.anggotaHistory:
         return MaterialPageRoute(builder: (_) => const anggota.HistoryScreen());
-
-      case Routes.attendanceReport:
-        return MaterialPageRoute(
-          builder: (_) => const AttendanceReportScreen(),
-        );
-
-      case Routes.exportReport:
-        return MaterialPageRoute(builder: (_) => const ExportReportScreen());
 
       case Routes.pimpinanHistory:
         return MaterialPageRoute(

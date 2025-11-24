@@ -68,11 +68,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/history', [AdminController::class, 'attendancesHistory'])->name('history');
         });
         
-        // ==================== RECORD ATTENDANCE (NEW) ====================
+        // ==================== RECORD ATTENDANCE ====================
         Route::prefix('attendance')->name('attendance.')->group(function () {
             Route::get('/record', [AdminController::class, 'recordAttendance'])->name('record');
             Route::post('/record', [AdminController::class, 'storeAttendance'])->name('store');
             Route::post('/bulk-import', [AdminController::class, 'bulkImportAttendance'])->name('bulkImport');
+        });
+        
+        // ==================== LAPORAN KEHADIRAN (NEW) ====================
+        Route::prefix('reports')->name('reports.')->group(function () {
+            // Halaman Laporan Kehadiran dengan Filter & Chart
+            Route::get('/attendance', [AdminController::class, 'attendanceReport'])->name('attendance');
+            
+            // Export Laporan (Excel, PDF, CSV)
+            Route::get('/export', [AdminController::class, 'exportReport'])->name('export');
         });
         
         // ==================== HISTORY ====================

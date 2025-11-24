@@ -250,8 +250,20 @@ async function submitAttendance(event) {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify({
+                user_id: formData.get('user_id'),
+                date: formData.get('date'),
+                type: formData.get('type'),
+                time: formData.get('time'),
+                status: formData.get('status'),
+                schedule_id: formData.get('schedule_id'),
+                location: formData.get('location'),
+                notes: formData.get('notes'),
+                photo: photoData
+            })
         });
         
         const result = await response.json();
@@ -261,11 +273,10 @@ async function submitAttendance(event) {
             location.reload();
         } else {
             alert('Gagal: ' + result.message);
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check"></i> Simpan Kehadiran';
         }
     } catch (error) {
         alert('Terjadi kesalahan: ' + error.message);
+    } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Simpan Kehadiran';
     }
