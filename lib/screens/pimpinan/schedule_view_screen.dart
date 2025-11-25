@@ -36,13 +36,14 @@ class _PimpinanScheduleViewScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.primaryColor,
-        title: const Text('Jadwal Kegiatan', style: TextStyle(color: Colors.white)),
+        title: const Text('Jadwal Kegiatan',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -65,49 +66,43 @@ class _PimpinanScheduleViewScreenState
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: Row(
         children: [
-          // Filter Chips
-          Row(
-            children: [
-              Expanded(
-                child: _buildFilterChip(
-                  'Hari Ini',
-                  'today',
-                  Icons.today,
-                  theme,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildFilterChip(
-                  'Mendatang',
-                  'upcoming',
-                  Icons.upcoming,
-                  theme,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildFilterChip(
-                  'Semua',
-                  'all',
-                  Icons.calendar_month,
-                  theme,
-                ),
-              ),
-            ],
+          Expanded(
+            child: _buildFilterChip(
+              'Hari Ini',
+              'today',
+              Icons.today,
+              theme,
+            ),
           ),
-          const SizedBox(height: 16),
-          // Statistics
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildFilterChip(
+              'Mendatang',
+              'upcoming',
+              Icons.upcoming,
+              theme,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildFilterChip(
+              'Semua',
+              'all',
+              Icons.calendar_month,
+              theme,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String value, IconData icon, ThemeData theme) {
+  Widget _buildFilterChip(
+      String label, String value, IconData icon, ThemeData theme) {
     final isSelected = _filter == value;
-    
+
     return Material(
       color: isSelected ? theme.primaryColor : Colors.grey[100],
       borderRadius: BorderRadius.circular(12),
@@ -142,40 +137,39 @@ class _PimpinanScheduleViewScreenState
     );
   }
 
-
-
   Widget _buildScheduleList(ThemeData theme) {
     return Consumer<ScheduleProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
           return Center(
-            child: CircularProgressIndicator(
-              color: theme.primaryColor,
-            ),
+            child: CircularProgressIndicator(color: theme.primaryColor),
           );
         }
 
         if (provider.schedules.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.event_busy, size: 64, color: Colors.grey[300]),
-                const SizedBox(height: 16),
-                Text(
-                  'Tidak ada jadwal',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.event_busy, size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tidak ada jadwal',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600]),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getEmptyMessage(),
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    _getEmptyMessage(),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -199,7 +193,7 @@ class _PimpinanScheduleViewScreenState
   String _getEmptyMessage() {
     switch (_filter) {
       case 'today':
-        return 'Tidak ada jadwal hari ini';
+        return 'Tidak ada jadwal untuk hari ini';
       case 'upcoming':
         return 'Tidak ada jadwal mendatang';
       default:
@@ -210,13 +204,15 @@ class _PimpinanScheduleViewScreenState
   Widget _buildScheduleCard(Schedule schedule, ThemeData theme) {
     final isPast = schedule.isPast;
     final isToday = schedule.isToday;
+    final statusColor = _getStatusColor(schedule.status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isToday ? Border.all(color: theme.primaryColor, width: 2) : null,
+        border:
+            isToday ? Border.all(color: theme.primaryColor, width: 2) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isPast ? 0.03 : 0.06),
@@ -235,18 +231,17 @@ class _PimpinanScheduleViewScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(schedule.status).withValues(alpha: 0.1),
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         _getTypeIcon(schedule.type),
-                        color: _getStatusColor(schedule.status),
+                        color: statusColor,
                         size: 20,
                       ),
                     ),
@@ -257,7 +252,8 @@ class _PimpinanScheduleViewScreenState
                         children: [
                           if (isToday)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
                               margin: const EdgeInsets.only(bottom: 4),
                               decoration: BoxDecoration(
                                 color: theme.primaryColor,
@@ -278,7 +274,8 @@ class _PimpinanScheduleViewScreenState
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: isPast ? Colors.grey[500] : Colors.grey[900],
+                              color:
+                                  isPast ? Colors.grey[500] : Colors.grey[900],
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -293,13 +290,14 @@ class _PimpinanScheduleViewScreenState
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                // Date & Time
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.calendar_today,
+                        size: 14, color: Colors.grey[600]),
                     const SizedBox(width: 6),
                     Text(
-                      DateFormat('EEE, dd MMM yyyy', 'id_ID').format(schedule.date),
+                      DateFormat('EEE, dd MMM yyyy', 'id_ID')
+                          .format(schedule.date),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[700],
@@ -321,29 +319,14 @@ class _PimpinanScheduleViewScreenState
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${schedule.getDurationInMinutes()} menit',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 if (schedule.location != null) ...[
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                      Icon(Icons.location_on,
+                          size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -355,29 +338,6 @@ class _PimpinanScheduleViewScreenState
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (schedule.participants != null && schedule.participants!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.people, size: 14, color: Colors.grey[600]),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${schedule.participants!.length} peserta',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Colors.grey[400],
                       ),
                     ],
                   ),
@@ -477,6 +437,8 @@ class _PimpinanScheduleViewScreenState
   }
 
   void _showScheduleDetail(Schedule schedule, ThemeData theme) {
+    final statusColor = _getStatusColor(schedule.status);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -496,7 +458,6 @@ class _PimpinanScheduleViewScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle Bar
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 12, bottom: 8),
@@ -508,16 +469,11 @@ class _PimpinanScheduleViewScreenState
                     ),
                   ),
                 ),
-
-                // Header dengan gradient
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        _getStatusColor(schedule.status),
-                        _getStatusColor(schedule.status).withValues(alpha: 0.8),
-                      ],
+                      colors: [statusColor, statusColor.withValues(alpha: 0.8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -568,7 +524,8 @@ class _PimpinanScheduleViewScreenState
                       ),
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -576,11 +533,8 @@ class _PimpinanScheduleViewScreenState
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              _getStatusIcon(schedule.status),
-                              size: 14,
-                              color: Colors.white,
-                            ),
+                            Icon(_getStatusIcon(schedule.status),
+                                size: 14, color: Colors.white),
                             const SizedBox(width: 6),
                             Text(
                               _getStatusLabel(schedule.status),
@@ -596,18 +550,16 @@ class _PimpinanScheduleViewScreenState
                     ],
                   ),
                 ),
-
-                // Content
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Info Cards
                       _buildDetailCard(
                         icon: Icons.calendar_today,
                         title: 'Tanggal',
-                        value: DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(schedule.date),
+                        value: DateFormat('EEEE, dd MMMM yyyy', 'id_ID')
+                            .format(schedule.date),
                         color: Colors.blue,
                       ),
                       const SizedBox(height: 12),
@@ -616,13 +568,6 @@ class _PimpinanScheduleViewScreenState
                         title: 'Waktu',
                         value: '${schedule.startTime} - ${schedule.endTime}',
                         color: Colors.purple,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDetailCard(
-                        icon: Icons.timer_outlined,
-                        title: 'Durasi',
-                        value: '${schedule.getDurationInMinutes()} menit',
-                        color: Colors.orange,
                       ),
                       if (schedule.location != null) ...[
                         const SizedBox(height: 12),
@@ -633,15 +578,12 @@ class _PimpinanScheduleViewScreenState
                           color: Colors.red,
                         ),
                       ],
-
                       if (schedule.description != null) ...[
                         const SizedBox(height: 24),
                         const Text(
                           'Deskripsi',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -661,23 +603,23 @@ class _PimpinanScheduleViewScreenState
                           ),
                         ),
                       ],
-
-                      if (schedule.participants != null && schedule.participants!.isNotEmpty) ...[
+                      if (schedule.participants != null &&
+                          schedule.participants!.isNotEmpty) ...[
                         const SizedBox(height: 24),
                         Row(
                           children: [
                             const Text(
                               'Peserta',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                                  fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.primaryColor.withValues(alpha: 0.1),
+                                color:
+                                    theme.primaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -704,7 +646,8 @@ class _PimpinanScheduleViewScreenState
                                 children: [
                                   CircleAvatar(
                                     radius: 20,
-                                    backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                                    backgroundColor: theme.primaryColor
+                                        .withValues(alpha: 0.1),
                                     child: Text(
                                       p.name[0].toUpperCase(),
                                       style: TextStyle(
@@ -716,14 +659,14 @@ class _PimpinanScheduleViewScreenState
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           p.name,
                                           style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
@@ -740,7 +683,6 @@ class _PimpinanScheduleViewScreenState
                               ),
                             )),
                       ],
-
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -789,7 +731,7 @@ class _PimpinanScheduleViewScreenState
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(width: 2),
                 Text(
                   value,
                   style: const TextStyle(

@@ -3,144 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Admin Login - Smart Attendance</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>Admin Login • Smart Attendance</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px;
+            font-family: "Inter", Arial, sans-serif;
         }
+
         .login-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-            max-width: 400px;
             width: 100%;
+            max-width: 380px;
+            background: #fff;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+            animation: fadeIn .6s ease-out;
         }
-        .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
+
+        .login-title {
             text-align: center;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #444;
         }
-        .login-body {
-            padding: 40px 30px;
+
+        .icon-wrap {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 2rem;
         }
+
+        /* Inputs */
+        .input-group-text {
+            border-color: #667eea;
+            background: #f7f8ff;
+        }
+
+        .form-control {
+            border-color: #667eea;
+        }
+
         .form-control:focus {
             border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            box-shadow: 0 0 0 0.17rem rgba(102, 126, 234, .25);
         }
+
+        /* Toggle Password Button */
+        #togglePassword {
+            border-left: 0;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        #togglePassword:hover {
+            background: rgba(102, 126, 234, 0.12);
+            color: #667eea;
+        }
+
+        /* Login Button */
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             border: none;
             padding: 12px;
             font-weight: 600;
         }
+
         .btn-login:hover {
-            opacity: 0.9;
+            opacity: .9;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
-        <div class="login-header">
-            <i class="fas fa-user-shield fa-3x mb-3"></i>
-            <h3 class="mb-0">Admin Login</h3>
-            <p class="mb-0 mt-2">Smart Attendance System</p>
+        <div class="icon-wrap" style="background: none;">
+            <img src="{{ asset('images/download.png') }}" alt="logo" style="width:100px; height:100px; object-fit:contain;">
         </div>
-        
-        <div class="login-body">
-            @if ($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    @foreach ($errors->all() as $error)
-                        {{ $error }}
-                    @endforeach
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
 
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <h3 class="login-title mb-4">Login Admin</h3>
+
+        <form id="loginForm" method="POST" action="{{ route('admin.login.post') }}">
+            @csrf
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+                    <input type="email" class="form-control" id="email" name="email" required>
                 </div>
-            @endif
-            
-            <form method="POST" action="{{ route('admin.login.post') }}">
-                @csrf
-                
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-envelope"></i>
-                        </span>
-                        <input type="email" 
-                               name="email" 
-                               class="form-control @error('email') is-invalid @enderror" 
-                               placeholder="admin@smartattendance.com"
-                               value="{{ old('email') }}"
-                               required
-                               autofocus>
-                    </div>
-                    @error('email')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-lock"></i>
-                        </span>
-                        <input type="password" 
-                               name="password" 
-                               class="form-control @error('password') is-invalid @enderror" 
-                               placeholder="••••••••"
-                               required>
-                    </div>
-                    @error('password')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-                
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                    <label class="form-check-label" for="remember">
-                        Remember me
-                    </label>
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-login w-100">
-                    <i class="fas fa-sign-in-alt me-2"></i> Login
-                </button>
-            </form>
-            
-            <hr class="my-4">
-            
-            <div class="text-center">
-                <small class="text-muted">
-                    Default credentials:<br>
-                    <strong>admin@smartattendance.com</strong> / <strong>admin123</strong>
-                </small>
             </div>
-        </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa fa-lock"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                    <button type="button" class="btn" id="togglePassword">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-login w-100 mt-2" id="loginBtn">
+                <i class="fa fa-sign-in-alt me-2"></i> Login
+            </button>
+        </form>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Toggle Password Visibility
+    $("#togglePassword").click(function() {
+        let pass = $("#password");
+        let icon = $(this).find("i");
+
+        pass.attr("type", pass.attr("type") === "password" ? "text" : "password");
+        icon.toggleClass("fa-eye fa-eye-slash");
+    });
+
+    // Form Submit Validation
+    $("#loginForm").submit(function(e) {
+        e.preventDefault();
+
+        const email = $("#email").val().trim();
+        const pass = $("#password").val().trim();
+
+        if (!email) {
+            return Swal.fire("Email Kosong", "Masukkan email Anda", "warning");
+        }
+        if (!pass) {
+            return Swal.fire("Password Kosong", "Masukkan password Anda", "warning");
+        }
+
+        // Loading
+        Swal.fire({
+            title: "Memverifikasi...",
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        $("#loginBtn").prop("disabled", true).html(`
+            <span class="spinner-border spinner-border-sm"></span> Memverifikasi...
+        `);
+
+        this.submit();
+    });
+
+    // Server-side Error
+    @if ($errors->any())
+        Swal.fire({
+            icon: "error",
+            title: "Login Gagal",
+            html: `{!! implode('<br>', $errors->all()) !!}`
+        });
+    @endif
+
+    // Success
+    @if (session("success"))
+        Swal.fire({
+            icon: "success",
+            title: "Berhasil!",
+            text: "{{ session('success') }}"
+        });
+    @endif
+</script>
+
 </body>
 </html>

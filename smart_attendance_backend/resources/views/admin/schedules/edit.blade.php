@@ -1,247 +1,283 @@
 @extends('layouts.app')
+@section('title', 'Edit Jadwal')
 
 @section('content')
-<div class="container-fluid px-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm border-0 mt-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-edit me-2"></i>Edit Schedule
-                    </h4>
+
+{{-- HEADER --}}
+<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+    <h4 class="fw-semibold m-0">Edit Jadwal</h4>
+
+    <a href="{{ route('admin.schedules.index') }}" 
+       class="btn btn-light border rounded-3"
+       onclick="return confirmBack(event)">
+        <i class="fas fa-arrow-left me-1"></i> Kembali
+    </a>
+</div>
+
+{{-- CARD FORM --}}
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+
+        {{-- ERROR HANDLER --}}
+        @if ($errors->any())
+            <div class="alert alert-danger border-0 rounded-3 shadow-sm">
+                <strong>Periksa kembali input Anda:</strong>
+                <ul class="mt-2 mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- FORM --}}
+        <form id="editForm" action="{{ route('admin.schedules.update', $schedule->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            {{-- JUDUL --}}
+            <div class="mb-3">
+                <label class="form-label fw-medium">Judul *</label>
+                <input type="text" 
+                       name="title" 
+                       class="form-control form-control-modern" 
+                       value="{{ old('title', $schedule->title) }}" required>
+            </div>
+
+            {{-- DESKRIPSI --}}
+            <div class="mb-3">
+                <label class="form-label fw-medium">Deskripsi</label>
+                <textarea class="form-control form-control-modern" name="description" rows="3">{{ old('description', $schedule->description) }}</textarea>
+            </div>
+
+            {{-- TANGGAL & WAKTU --}}
+            <div class="row g-3">
+
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Tanggal *</label>
+                    <input type="date" 
+                           name="date" 
+                           class="form-control form-control-modern"
+                           value="{{ old('date', $schedule->date) }}" required>
                 </div>
-                <div class="card-body">
-                    <!-- Alert untuk error -->
-                    @if ($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Oops!</strong> Ada beberapa masalah dengan input Anda:
-                            <ul class="mb-0 mt-2">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    @endif
 
-                    <form action="{{ route('admin.schedules.update', $schedule->id) }}" method="POST">
-                        @csrf
-                        @method('PUT')
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Waktu Mulai *</label>
+                    <input type="time" 
+                           name="start_time"
+                           id="start_time"
+                           class="form-control form-control-modern"
+                           value="{{ old('start_time', $schedule->start_time) }}" required>
+                </div>
 
-                        <div class="row">
-                            <!-- Title -->
-                            <div class="col-md-6 mb-3">
-                                <label for="title" class="form-label">
-                                    Judul <span class="text-danger">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    class="form-control @error('title') is-invalid @enderror" 
-                                    id="title" 
-                                    name="title" 
-                                    value="{{ old('title', $schedule->title) }}" 
-                                    required
-                                    placeholder="Contoh: Rapat Tim Marketing"
-                                >
-                                @error('title')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">Waktu Selesai *</label>
+                    <input type="time" 
+                           name="end_time"
+                           id="end_time"
+                           class="form-control form-control-modern"
+                           value="{{ old('end_time', $schedule->end_time) }}" required>
+                </div>
 
-                            <!-- Date -->
-                            <div class="col-md-6 mb-3">
-                                <label for="date" class="form-label">
-                                    Tanggal <span class="text-danger">*</span>
-                                </label>
-                                <input 
-                                    type="date" 
-                                    class="form-control @error('date') is-invalid @enderror" 
-                                    id="date" 
-                                    name="date" 
-                                    value="{{ old('date', $schedule->date) }}" 
-                                    required
-                                >
-                                @error('date')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+            </div>
 
-                            <!-- Start Time -->
-                            <div class="col-md-6 mb-3">
-                                <label for="start_time" class="form-label">
-                                    Waktu Mulai <span class="text-danger">*</span>
-                                </label>
-                                <input 
-                                    type="time" 
-                                    class="form-control @error('start_time') is-invalid @enderror" 
-                                    id="start_time" 
-                                    name="start_time" 
-                                    value="{{ old('start_time', $schedule->start_time) }}" 
-                                    required
-                                >
-                                @error('start_time')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+            {{-- LOKASI & TIPE --}}
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Lokasi *</label>
+                    <input type="text" name="location" 
+                           class="form-control form-control-modern"
+                           value="{{ old('location', $schedule->location) }}" required>
+                </div>
 
-                            <!-- End Time -->
-                            <div class="col-md-6 mb-3">
-                                <label for="end_time" class="form-label">
-                                    Waktu Selesai <span class="text-danger">*</span>
-                                </label>
-                                <input 
-                                    type="time" 
-                                    class="form-control @error('end_time') is-invalid @enderror" 
-                                    id="end_time" 
-                                    name="end_time" 
-                                    value="{{ old('end_time', $schedule->end_time) }}" 
-                                    required
-                                >
-                                @error('end_time')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Location -->
-                            <div class="col-md-6 mb-3">
-                                <label for="location" class="form-label">
-                                    Lokasi <span class="text-danger">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    class="form-control @error('location') is-invalid @enderror" 
-                                    id="location" 
-                                    name="location" 
-                                    value="{{ old('location', $schedule->location) }}" 
-                                    required
-                                    placeholder="Contoh: Ruang Meeting Lt. 3"
-                                >
-                                @error('location')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Type -->
-                            <div class="col-md-6 mb-3">
-                                <label for="type" class="form-label">
-                                    Tipe <span class="text-danger">*</span>
-                                </label>
-                                <select 
-                                    class="form-select @error('type') is-invalid @enderror" 
-                                    id="type" 
-                                    name="type"
-                                    required
-                                >
-                                    <option value="">Pilih Tipe</option>
-                                    <option value="meeting" {{ old('type', $schedule->type) == 'meeting' ? 'selected' : '' }}>Meeting</option>
-                                    <option value="training" {{ old('type', $schedule->type) == 'training' ? 'selected' : '' }}>Training</option>
-                                    <option value="event" {{ old('type', $schedule->type) == 'event' ? 'selected' : '' }}>Event</option>
-                                    <option value="other" {{ old('type', $schedule->type) == 'other' ? 'selected' : '' }}>Lainnya</option>
-                                </select>
-                                @error('type')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Description -->
-                            <div class="col-12 mb-3">
-                                <label for="description" class="form-label">
-                                    Deskripsi
-                                </label>
-                                <textarea 
-                                    class="form-control @error('description') is-invalid @enderror" 
-                                    id="description" 
-                                    name="description" 
-                                    rows="4"
-                                    placeholder="Tambahkan deskripsi schedule (opsional)"
-                                >{{ old('description', $schedule->description) }}</textarea>
-                                @error('description')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <!-- Status -->
-                            <div class="col-md-6 mb-3">
-                                <label for="status" class="form-label">
-                                    Status <span class="text-danger">*</span>
-                                </label>
-                                <select 
-                                    class="form-select @error('status') is-invalid @enderror" 
-                                    id="status" 
-                                    name="status"
-                                    required
-                                >
-                                    <option value="scheduled" {{ old('status', $schedule->status) == 'scheduled' ? 'selected' : '' }}>Scheduled</option>
-                                    <option value="ongoing" {{ old('status', $schedule->status) == 'ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                    <option value="completed" {{ old('status', $schedule->status) == 'completed' ? 'selected' : '' }}>Completed</option>
-                                    <option value="cancelled" {{ old('status', $schedule->status) == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                                </select>
-                                @error('status')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="{{ route('admin.schedules.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Kembali
-                            </a>
-                            <div>
-                                <button type="reset" class="btn btn-outline-secondary me-2">
-                                    <i class="fas fa-undo me-2"></i>Reset
-                                </button>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Update Schedule
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Tipe *</label>
+                    <select name="type" 
+                            class="form-select form-select-modern"
+                            required>
+                        <option value="meeting"  {{ old('type', $schedule->type) == 'meeting' ? 'selected' : '' }}>Meeting</option>
+                        <option value="training" {{ old('type', $schedule->type) == 'training' ? 'selected' : '' }}>Training</option>
+                        <option value="event"    {{ old('type', $schedule->type) == 'event'    ? 'selected' : '' }}>Event</option>
+                        <option value="other"    {{ old('type', $schedule->type) == 'other'    ? 'selected' : '' }}>Lainnya</option>
+                    </select>
                 </div>
             </div>
-        </div>
+
+            {{-- STATUS --}}
+            <div class="mt-3 mb-2">
+                <label class="form-label fw-medium">Status *</label>
+                <select name="status" class="form-select form-select-modern" required>
+                    <option value="scheduled" {{ $schedule->status == 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
+                    <option value="ongoing"   {{ $schedule->status == 'ongoing'   ? 'selected' : '' }}>Berlangsung</option>
+                    <option value="completed" {{ $schedule->status == 'completed' ? 'selected' : '' }}>Selesai</option>
+                    <option value="cancelled" {{ $schedule->status == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                </select>
+            </div>
+
+            {{-- BUTTONS --}}
+            <div class="d-flex justify-content-end gap-2 mt-4">
+
+                <button type="button" 
+                        class="btn btn-light border rounded-3"
+                        onclick="confirmBack(event)">
+                    <i class="fas fa-arrow-left me-1"></i> Kembali
+                </button>
+
+                <button type="button" 
+                        class="btn btn-outline-secondary rounded-3"
+                        onclick="confirmReset()">
+                    <i class="fas fa-undo me-1"></i> Reset
+                </button>
+
+                <button type="button" 
+                        class="btn btn-primary rounded-3"
+                        onclick="confirmSubmit()">
+                    <i class="fas fa-save me-1"></i> Update
+                </button>
+
+            </div>
+
+        </form>
+
     </div>
 </div>
 
-@push('styles')
-<style>
-    .form-label {
-        font-weight: 600;
-        color: #495057;
-    }
-    
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    
-    .card {
-        border-radius: 10px;
-    }
-    
-    .card-header {
-        border-radius: 10px 10px 0 0 !important;
-        padding: 1.25rem;
-    }
-</style>
-@endpush
+@endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-    // Validasi waktu mulai dan selesai
-    document.getElementById('end_time').addEventListener('change', function() {
-        const startTime = document.getElementById('start_time').value;
-        const endTime = this.value;
-        
-        if (startTime && endTime && endTime <= startTime) {
-            alert('Waktu selesai harus lebih besar dari waktu mulai!');
-            this.value = '';
+// =============================================
+// VALIDASI JAM
+// =============================================
+function validateTime() {
+    let start = document.getElementById("start_time").value;
+    let end   = document.getElementById("end_time").value;
+
+    if (start && end && end <= start) {
+        Swal.fire({
+            icon: "error",
+            title: "Jam Tidak Valid",
+            text: "Waktu selesai harus lebih besar dari waktu mulai.",
+            confirmButtonColor: "#d33",
+        });
+        return false;
+    }
+    return true;
+}
+
+// =============================================
+// KONFIRMASI UPDATE
+// =============================================
+function confirmSubmit() {
+    if (!validateTime()) return;
+
+    Swal.fire({
+        title: "Update Jadwal?",
+        text: "Pastikan semua data sudah benar.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Ya, Update",
+        cancelButtonText: "Periksa Lagi",
+        confirmButtonColor: "#667eea",
+        cancelButtonColor: "#6c757d",
+        buttonsStyling: false,
+        customClass: {
+            confirmButton: "btn btn-primary mx-2",
+            cancelButton: "btn btn-secondary mx-2"
+        }
+    }).then(res => {
+        if (res.isConfirmed) {
+            loadingPopup();
+            document.getElementById("editForm").submit();
         }
     });
+}
 
-    // Set minimum date ke hari ini
-    document.getElementById('date').setAttribute('min', new Date().toISOString().split('T')[0]);
+// =============================================
+// LOADING POPUP
+// =============================================
+function loadingPopup() {
+    Swal.fire({
+        title: "Menyimpan...",
+        html: "Harap tunggu sebentar.",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading(),
+    });
+}
+
+// =============================================
+// KONFIRMASI RESET
+// =============================================
+function confirmReset() {
+    Swal.fire({
+        title: "Reset Form?",
+        text: "Semua input akan dikembalikan ke nilai awal.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Ya, Reset",
+        cancelButtonText: "Batal",
+        confirmButtonColor: "#d33",
+        buttonsStyling: false,
+        customClass: {
+            confirmButton: "btn btn-danger mx-2",
+            cancelButton:  "btn btn-secondary mx-2"
+        }
+    }).then(res => {
+        if (res.isConfirmed) {
+            document.getElementById("editForm").reset();
+        }
+    });
+}
+
+// =============================================
+// KONFIRMASI KEMBALI
+// =============================================
+function confirmBack(event) {
+    event.preventDefault();
+
+    Swal.fire({
+        title: "Kembali?",
+        text: "Perubahan yang belum disimpan akan hilang.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Ya, Kembali",
+        cancelButtonText: "Tetap di sini",
+        confirmButtonColor: "#d33",
+        buttonsStyling: false,
+        customClass: {
+            confirmButton: "btn btn-danger mx-2",
+            cancelButton:  "btn btn-secondary mx-2"
+        }
+    }).then(res => {
+        if (res.isConfirmed) {
+            window.location.href = "{{ route('admin.schedules.index') }}";
+        }
+    });
+}
 </script>
+
+{{-- MODERN FORM STYLE --}}
+<style>
+.form-control-modern,
+.form-select-modern {
+    border-radius: 10px;
+    border: 1px solid #d6d8e1;
+    padding: 10px 12px;
+    transition: .2s;
+}
+
+.form-control-modern:focus,
+.form-select-modern:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 .15rem rgba(102,126,234,0.25);
+}
+
+.card {
+    border-radius: 14px;
+}
+</style>
+
 @endpush
-@endsection

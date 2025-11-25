@@ -62,6 +62,13 @@ class AdminController extends Controller
     {
         return view('admin.users.create');
     }
+
+    public function usersEdit($id)
+    {
+        $user = User::findOrFail($id);
+
+        return view('admin.users.edit', compact('user'));
+    }
     
     public function usersStore(Request $request)
     {
@@ -104,6 +111,59 @@ class AdminController extends Controller
         $users = User::active()->get();
         return view('admin.schedules.create', compact('users'));
     }
+
+    public function schedulesEdit($id)
+    {
+        $schedule = Schedule::findOrFail($id);
+
+        return view('admin.schedules.edit', [
+            'schedule' => $schedule
+        ]);
+    }
+
+    public function schedulesUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $schedule = Schedule::findOrFail($id);
+
+        $schedule->title = $request->title;
+        $schedule->date = $request->date;
+        $schedule->start_time = $request->start_time;
+        $schedule->end_time = $request->end_time;
+        $schedule->is_active = $request->is_active ?? 1;
+
+        $schedule->save();
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'Jadwal berhasil diperbarui.');
+    }
+
+    public function schedulesDestroy($id)
+    {
+        $schedule = Schedule::findOrFail($id);
+
+        // Jika ada relasi participants, detach dulu untuk mencegah error foreign key
+        if ($schedule->participants()) {
+            $schedule->participants()->detach();
+        }
+
+        $schedule->delete();
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'Jadwal berhasil dihapus.');
+    }
+
+
+
     
     public function schedulesStore(Request $request)
     {
@@ -145,9 +205,7 @@ class AdminController extends Controller
         $status = $request->get('status');
         $department = $request->get('department');
 
-        // Query attendances
-        $query = Attendance::with('user')
-            ->whereDate('date', $date);
+        $query = Attendance::with('user')->whereDate('date', $date);
 
         if ($status) {
             $query->where('status', $status);
@@ -161,7 +219,6 @@ class AdminController extends Controller
 
         $attendances = $query->latest('created_at')->paginate(50);
 
-        // Today's statistics
         $todayStats = [
             'present' => Attendance::whereDate('date', $date)->where('status', 'present')->count(),
             'late' => Attendance::whereDate('date', $date)->where('status', 'late')->count(),
@@ -169,18 +226,22 @@ class AdminController extends Controller
             'absent' => Attendance::whereDate('date', $date)->where('status', 'absent')->count(),
         ];
 
-        // Get departments for filter
         $departments = User::whereNotNull('department')
             ->distinct()
             ->pluck('department')
             ->filter();
 
+        // 🔥 tambahkan ini
+        $users = User::orderBy('name')->get();
+
         return view('admin.attendances.index', compact(
             'attendances',
             'todayStats',
-            'departments'
+            'departments',
+            'users'  // 🔥 wajib
         ));
     }
+
     
     public function attendancesUpdateStatus(Request $request, $id)
     {
@@ -392,9 +453,11 @@ class AdminController extends Controller
 
         $attendances = $query->latest('date')->paginate(50);
 
+        // Get all users for filter dropdown (FIX)
+        $users = User::orderBy('name')->get();
+
         // Calculate statistics
-        $allQuery = clone $query;
-        $allAttendances = $allQuery->get();
+        $allAttendances = (clone $query)->get();
         
         $statistics = [
             'total' => $allAttendances->count(),
@@ -410,7 +473,7 @@ class AdminController extends Controller
             ? ($presentCount / $statistics['total']) * 100 
             : 0;
 
-        // Chart data (last 7 days)
+        // Chart data
         $chartLabels = [];
         $chartPresent = [];
         $chartLate = [];
@@ -421,13 +484,13 @@ class AdminController extends Controller
             $chartLabels[] = $date->format('D, d M');
             
             $dayQuery = Attendance::whereDate('date', $date);
-            
+
             if ($department) {
                 $dayQuery->whereHas('user', function($q) use ($department) {
                     $q->where('department', $department);
                 });
             }
-            
+
             $chartPresent[] = (clone $dayQuery)->where('status', 'present')->count();
             $chartLate[] = (clone $dayQuery)->where('status', 'late')->count();
             $chartAbsent[] = (clone $dayQuery)->where('status', 'absent')->count();
@@ -446,9 +509,11 @@ class AdminController extends Controller
             'chartPresent',
             'chartLate',
             'chartAbsent',
-            'departments'
+            'departments',
+            'users'     // 🔥 WAJIB DITAMBAHKAN
         ));
     }
+
 
     // ============================================
     // Export Report

@@ -1,167 +1,168 @@
-{{-- ============================================ --}}
+{{-- ========================================================= --}}
 {{-- File: resources/views/admin/attendances/index.blade.php --}}
-{{-- Kelola Kehadiran Real-time (CRUD & Update Status) --}}
-{{-- ============================================ --}}
+{{-- Kelola Kehadiran (Modern, Simple, Clean UI) --}}
+{{-- ========================================================= --}}
 @extends('layouts.app')
 @section('title', 'Kelola Kehadiran')
 
 @section('content')
-<div class="d-flex justify-content-between pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Kelola Kehadiran</h1>
-    <div>
-        <a href="{{ route('admin.reports.attendance') }}" class="btn btn-info">
-            <i class="fas fa-chart-bar"></i> Lihat Laporan
-        </a>
-    </div>
+
+{{-- HEADER --}}
+<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+    <h4 class="fw-semibold m-0">Kelola Kehadiran</h4>
+    <a href="{{ route('admin.reports.attendance') }}" class="btn btn-primary rounded-3">
+        <i class="fas fa-chart-bar me-1"></i> Lihat Laporan
+    </a>
 </div>
 
-<!-- Quick Filter -->
-<div class="card mb-3">
+{{-- FILTER (Sederhana & To the point) --}}
+<div class="card border-0 shadow-sm rounded-4 mb-3">
     <div class="card-body">
+
         <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Pilih Tanggal</label>
-                <input type="date" id="filterDate" class="form-control" value="{{ date('Y-m-d') }}">
+
+            {{-- Tanggal --}}
+            <div class="col-md-4">
+                <label class="form-label fw-medium">Tanggal</label>
+                <input type="date" id="filterDate" 
+                       class="form-control form-control-modern" 
+                       value="{{ request('date', date('Y-m-d')) }}">
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Status</label>
-                <select id="filterStatus" class="form-select">
+
+            {{-- Status --}}
+            <div class="col-md-4">
+                <label class="form-label fw-medium">Status</label>
+                <select id="filterStatus" class="form-select form-select-modern">
                     <option value="">Semua Status</option>
                     <option value="present">Hadir</option>
                     <option value="late">Terlambat</option>
-                    <option value="absent">Tidak Hadir</option>
+                    <option value="absent">Alfa</option>
                     <option value="excused">Izin</option>
                     <option value="leave">Cuti</option>
                 </select>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Departemen</label>
-                <select id="filterDepartment" class="form-select">
-                    <option value="">Semua Departemen</option>
-                    @foreach($departments as $dept)
-                        <option value="{{ $dept }}">{{ $dept }}</option>
+
+            {{-- USER (Pengganti Departemen) --}}
+            <div class="col-md-4">
+                <label class="form-label fw-medium">User</label>
+                <select id="filterUser" class="form-select form-select-modern">
+                    <option value="">Semua User</option>
+                    @foreach($users as $u)
+                        <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
-                <button type="button" class="btn btn-primary w-100" onclick="applyFilter()">
-                    <i class="fas fa-filter"></i> Filter
-                </button>
-            </div>
+
         </div>
+
+        <div class="text-end mt-3">
+            <button class="btn btn-primary rounded-3 px-4" onclick="applyFilter()">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+        </div>
+
     </div>
 </div>
 
-<!-- Statistics Today -->
-<div class="row mb-3">
+{{-- STATISTIK HARI INI --}}
+<div class="row g-3 mb-3">
+
+    @php 
+        $cards = [
+            ['val'=>$todayStats['present'], 'label'=>'Hadir',       'bg'=>'success'],
+            ['val'=>$todayStats['late'],    'label'=>'Terlambat',   'bg'=>'warning'],
+            ['val'=>$todayStats['excused'], 'label'=>'Izin',        'bg'=>'info'],
+            ['val'=>$todayStats['absent'],  'label'=>'Tidak Hadir', 'bg'=>'danger'],
+        ];
+    @endphp
+
+    @foreach($cards as $c)
     <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ $todayStats['present'] }}</h3>
-                <small>Hadir Hari Ini</small>
+        <div class="card text-white bg-{{ $c['bg'] }} rounded-4 shadow-sm">
+            <div class="card-body text-center py-3">
+                <h3 class="mb-0 fw-bold">{{ $c['val'] }}</h3>
+                <small>{{ $c['label'] }}</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ $todayStats['late'] }}</h3>
-                <small>Terlambat</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ $todayStats['excused'] }}</h3>
-                <small>Izin</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body text-center">
-                <h3 class="mb-0">{{ $todayStats['absent'] }}</h3>
-                <small>Tidak Hadir</small>
-            </div>
-        </div>
-    </div>
+    @endforeach
 </div>
 
-<!-- Attendance Table -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Daftar Kehadiran Hari Ini</h5>
-        <span class="badge bg-primary">{{ $attendances->total() }} Data</span>
+{{-- TABLE --}}
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-header bg-light rounded-top-4 py-3 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Daftar Kehadiran</span>
+        <span class="badge bg-primary rounded-pill">{{ $attendances->total() }}</span>
     </div>
+
     <div class="card-body">
+
         <div class="table-responsive">
-            <table id="attendancesTable" class="table table-striped table-hover">
-                <thead>
+            <table id="attendanceTable" class="table table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <th width="5%">No</th>
-                        <th width="12%">Tanggal</th>
-                        <th width="15%">Nama</th>
-                        <th width="10%">Departemen</th>
-                        <th width="10%">Check-In</th>
-                        <th width="10%">Check-Out</th>
-                        <th width="10%">Durasi</th>
-                        <th width="13%">Status</th>
-                        <th width="15%">Aksi</th>
+                        <th>No</th>
+                        <th>Tanggal</th>
+                        <th>User</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Durasi</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                    @forelse($attendances as $index => $att)
+                    @forelse($attendances as $i => $att)
                     <tr>
-                        <td>{{ $attendances->firstItem() + $index }}</td>
+                        {{-- No --}}
+                        <td>{{ $attendances->firstItem() + $i }}</td>
+
+                        {{-- Tanggal --}}
                         <td>{{ $att->date->format('d/m/Y') }}</td>
+
+                        {{-- USER --}}
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="avatar me-2">
-                                    @if($att->user->photo)
-                                        <img src="{{ Storage::url($att->user->photo) }}" 
-                                             class="rounded-circle" width="30" height="30">
-                                    @else
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
-                                             style="width: 30px; height: 30px;">
-                                            {{ substr($att->user->name, 0, 1) }}
-                                        </div>
-                                    @endif
-                                </div>
-                                <div>
+
+                                {{-- Avatar --}}
+                                @if($att->user->photo)
+                                    <img src="{{ Storage::url($att->user->photo) }}" 
+                                         class="rounded-circle me-2" width="32" height="32">
+                                @else
+                                    <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center me-2" 
+                                         style="width:32px; height:32px;">
+                                         {{ substr($att->user->name,0,1) }}
+                                    </div>
+                                @endif
+
+                                <div class="lh-sm">
                                     <strong>{{ $att->user->name }}</strong><br>
                                     <small class="text-muted">{{ $att->user->employee_id }}</small>
                                 </div>
+
                             </div>
                         </td>
-                        <td>{{ $att->user->department ?? '-' }}</td>
+
+                        {{-- Check-In --}}
                         <td>
                             @if($att->check_in_time)
                                 <span class="badge bg-success">{{ $att->check_in_time }}</span>
-                                @if($att->check_in_photo)
-                                    <a href="{{ Storage::url($att->check_in_photo) }}" target="_blank" 
-                                       class="btn btn-sm btn-link p-0">
-                                        <i class="fas fa-image"></i>
-                                    </a>
-                                @endif
                             @else
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
+
+                        {{-- Check-Out --}}
                         <td>
                             @if($att->check_out_time)
                                 <span class="badge bg-info">{{ $att->check_out_time }}</span>
-                                @if($att->check_out_photo)
-                                    <a href="{{ Storage::url($att->check_out_photo) }}" target="_blank" 
-                                       class="btn btn-sm btn-link p-0">
-                                        <i class="fas fa-image"></i>
-                                    </a>
-                                @endif
                             @else
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
+
+                        {{-- Durasi --}}
                         <td>
                             @if($att->work_duration)
                                 {{ floor($att->work_duration / 60) }}j {{ $att->work_duration % 60 }}m
@@ -169,184 +170,215 @@
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
+
+                        {{-- STATUS (Editable) --}}
                         <td>
-                            <select class="form-select form-select-sm status-select" 
-                                    data-id="{{ $att->id }}" 
-                                    data-original="{{ $att->status }}">
-                                <option value="present" {{ $att->status == 'present' ? 'selected' : '' }}>Hadir</option>
-                                <option value="late" {{ $att->status == 'late' ? 'selected' : '' }}>Terlambat</option>
-                                <option value="absent" {{ $att->status == 'absent' ? 'selected' : '' }}>Alfa</option>
-                                <option value="excused" {{ $att->status == 'excused' ? 'selected' : '' }}>Izin</option>
-                                <option value="leave" {{ $att->status == 'leave' ? 'selected' : '' }}>Cuti</option>
+                            <select class="form-select form-select-sm rounded-3 status-select"
+                                    data-id="{{ $att->id }}"
+                                    data-original="{{ $att->status }}"
+                                    data-name="{{ $att->user->name }}"
+                                    data-employee-id="{{ $att->user->employee_id }}"
+                                    data-date="{{ $att->date->format('d/m/Y') }}">
+                                <option value="present" {{ $att->status=='present'?'selected':'' }}>Hadir</option>
+                                <option value="late"    {{ $att->status=='late'?'selected':'' }}>Terlambat</option>
+                                <option value="absent"  {{ $att->status=='absent'?'selected':'' }}>Alfa</option>
+                                <option value="excused" {{ $att->status=='excused'?'selected':'' }}>Izin</option>
+                                <option value="leave"   {{ $att->status=='leave'?'selected':'' }}>Cuti</option>
                             </select>
                         </td>
+
+                        {{-- AKSI --}}
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="viewHistory({{ $att->id }})" 
-                                    title="History">
+                            <button class="btn btn-sm btn-outline-primary rounded-3" onclick="viewHistory({{ $att->id }})">
                                 <i class="fas fa-history"></i>
                             </button>
                             @if($att->notes)
-                                <button class="btn btn-sm btn-secondary" onclick="viewNotes({{ $att->id }})" 
-                                        title="Notes">
-                                    <i class="fas fa-sticky-note"></i>
-                                </button>
+                            <button class="btn btn-sm btn-outline-secondary rounded-3" onclick="viewNotes(`{{ addslashes($att->notes) }}`)">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="text-center py-4">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
-                            <p class="text-muted">Tidak ada data kehadiran hari ini</p>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted d-block mb-2"></i>
+                            <h6 class="text-muted">Tidak ada data kehadiran</h6>
                         </td>
                     </tr>
                     @endforelse
                 </tbody>
+
             </table>
         </div>
-        
+
         <div class="mt-3">
             {{ $attendances->links() }}
         </div>
+
     </div>
 </div>
 
-
-<!-- History Modal -->
-<div class="modal fade" id="historyModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Histori Kehadiran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="historyContent">
-                <div class="text-center">
-                    <div class="spinner-border"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-$(document).ready(function() {
-    // DataTable - Disable jika tidak ada data
-    if ($('#attendancesTable tbody tr').length > 0 && !$('#attendancesTable tbody tr td').hasClass('text-center')) {
-        $('#attendancesTable').DataTable({
-            paging: false,
-            searching: false,
-            ordering: true,
-            info: false,
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.5/i18n/id.json' }
-        });
-    }
-
-    // Status Change
-    $('.status-select').change(function() {
-        const id = $(this).data('id');
-        const status = $(this).val();
-        const original = $(this).data('original');
-        const $select = $(this);
-        
-        if (confirm('Yakin ubah status kehadiran ini?')) {
-            $.ajax({
-                url: '/admin/attendances/' + id + '/status',
-                method: 'PUT',
-                data: { 
-                    status: status,
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert('Status berhasil diubah');
-                        $select.data('original', status);
-                        location.reload();
-                    } else {
-                        alert('Gagal mengubah status');
-                        $select.val(original);
-                    }
-                },
-                error: function() {
-                    alert('Terjadi kesalahan');
-                    $select.val(original);
-                }
-            });
-        } else {
-            $(this).val(original);
-        }
-    });
-});
-
-// Filter
+// ====================================================
+// FILTER
+// ====================================================
 function applyFilter() {
-    const date = $('#filterDate').val();
-    const status = $('#filterStatus').val();
-    const department = $('#filterDepartment').val();
-    
+    const date  = $('#filterDate').val();
+    const stat  = $('#filterStatus').val();
+    const user  = $('#filterUser').val();
+
     let url = '{{ route("admin.attendances.index") }}?';
-    if (date) url += 'date=' + date + '&';
-    if (status) url += 'status=' + status + '&';
-    if (department) url += 'department=' + department;
-    
+
+    if (date) url += `date=${date}&`;
+    if (stat) url += `status=${stat}&`;
+    if (user) url += `user=${user}`;
+
     window.location.href = url;
 }
 
-// View Detail
-function viewDetail(id) {
-    $('#detailModal').modal('show');
-    $('#detailContent').html('<div class="text-center"><div class="spinner-border"></div></div>');
-    
-    $.get('/admin/attendances/' + id, function(data) {
-        let html = `
-            <div class="row">
-                <div class="col-md-6">
-                    <table class="table table-borderless">
-                        <tr><th>Nama:</th><td>${data.user.name}</td></tr>
-                        <tr><th>Tanggal:</th><td>${data.date}</td></tr>
-                        <tr><th>Check-In:</th><td>${data.check_in_time || '-'}</td></tr>
-                        <tr><th>Check-Out:</th><td>${data.check_out_time || '-'}</td></tr>
-                        <tr><th>Durasi:</th><td>${data.work_duration || '-'}</td></tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    ${data.check_in_photo ? `<img src="${data.check_in_photo}" class="img-fluid rounded mb-2" alt="Check-in">` : ''}
-                    ${data.check_out_photo ? `<img src="${data.check_out_photo}" class="img-fluid rounded" alt="Check-out">` : ''}
-                </div>
-            </div>
-        `;
-        $('#detailContent').html(html);
+// ====================================================
+// POPUP NOTES
+// ====================================================
+function viewNotes(notes) {
+    Swal.fire({
+        title: 'Catatan',
+        html: `<div class='p-3 bg-light rounded text-start'>${notes}</div>`,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#667eea'
     });
 }
 
-// View History
+// ====================================================
+// HISTORY
+// ====================================================
 function viewHistory(id) {
-    $('#historyModal').modal('show');
-    $('#historyContent').html('<div class="text-center"><div class="spinner-border"></div></div>');
-    
-    $.get('/admin/attendances/' + id + '/history', function(data) {
-        let html = '<div class="list-group">';
-        data.forEach(log => {
-            html += `<div class="list-group-item">
-                <div class="d-flex justify-content-between">
-                    <strong>${log.action}</strong>
-                    <small class="text-muted">${log.created_at}</small>
-                </div>
-                <p class="mb-1">${log.description || ''}</p>
-                <small class="text-muted">Oleh: ${log.user.name}</small>
-            </div>`;
+    Swal.fire({
+        title: 'Memuat...',
+        html: '<div class="spinner-border text-primary"></div>',
+        showConfirmButton: false
+    });
+
+    $.get(`/admin/attendances/${id}/history`, function(res) {
+
+        let html = "<div class='list-group text-start'>";
+
+        if (res.length > 0) {
+            res.forEach(log => {
+                html += `
+                    <div class="list-group-item">
+                        <strong>${log.action}</strong>
+                        <p class="mb-1">${log.description ?? ''}</p>
+                        <small class="text-muted">${log.created_at}</small>
+                    </div>
+                `;
+            });
+        } else {
+            html = "<p class='text-muted text-center py-3'>Tidak ada histori</p>";
+        }
+
+        Swal.fire({
+            title: 'Histori Kehadiran',
+            html,
+            width: '600px',
+            confirmButtonText: 'Tutup',
+            confirmButtonColor: '#667eea'
         });
-        html += '</div>';
-        $('#historyContent').html(html);
+
     });
 }
 
-// View Notes
-function viewNotes(id) {
-    // Implementation for viewing notes
-    alert('View notes for attendance ID: ' + id);
-}
+// ====================================================
+// PERUBAHAN STATUS
+// ====================================================
+$('.status-select').change(function () {
+
+    const el = $(this);
+    const id = el.data('id');
+    const newStatus = el.val();
+    const oldStatus = el.data('original');
+
+    const name = el.data('name');
+    const emp  = el.data('employee-id');
+    const date = el.data('date');
+
+    Swal.fire({
+        title: 'Ubah Status?',
+        html: `
+            <div class='text-start'>
+                <strong>${name}</strong> (${emp}) <br>
+                <small class='text-muted'>${date}</small>
+
+                <hr>
+                <p>Status baru: <span class='badge bg-primary'>${newStatus}</span></p>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, ubah',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#667eea',
+        cancelButtonColor: '#6c757d'
+    })
+    .then(res => {
+
+        if (!res.isConfirmed) {
+            el.val(oldStatus);
+            return;
+        }
+
+        Swal.fire({
+            title: 'Menyimpan...',
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        $.ajax({
+            url: `/admin/attendances/${id}/status`,
+            method: 'PUT',
+            data: {
+                status: newStatus,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function () {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+                el.data('original', newStatus);
+            },
+            error: function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Tidak dapat mengubah status',
+                    confirmButtonColor: '#d33'
+                });
+                el.val(oldStatus);
+            }
+        });
+
+    });
+
+});
 </script>
+
+<style>
+.form-control-modern,
+.form-select-modern {
+    border-radius: 12px;
+    padding: 10px;
+}
+.status-select:hover {
+    box-shadow: 0 0 0 .15rem rgba(102,126,234,.25);
+}
+</style>
 @endpush
