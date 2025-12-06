@@ -18,12 +18,10 @@ class Attendance extends Model
         'check_in_time',
         'check_in_photo',
         'check_in_confidence',
-        'check_in_location',
         'check_in_device',
         'check_out_time',
         'check_out_photo',
         'check_out_confidence',
-        'check_out_location',
         'check_out_device',
         'status',
         'work_duration',
@@ -113,7 +111,6 @@ class Attendance extends Model
         $this->check_in_time = now()->format('H:i:s');
         $this->check_in_photo = $photoPath;
         $this->check_in_confidence = $confidence;
-        $this->check_in_location = $location;
         $this->check_in_device = $device;
         
         // Determine status based on schedule
@@ -127,7 +124,6 @@ class Attendance extends Model
         $this->check_out_time = now()->format('H:i:s');
         $this->check_out_photo = $photoPath;
         $this->check_out_confidence = $confidence;
-        $this->check_out_location = $location;
         $this->check_out_device = $device;
         
         // Calculate work duration

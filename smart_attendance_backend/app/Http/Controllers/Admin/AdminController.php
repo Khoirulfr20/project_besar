@@ -18,7 +18,9 @@ use App\Exports\AttendanceExport;
 
 class AdminController extends Controller
 {
-    // Dashboard
+    /**
+     * DASHBOARD VIEW
+     */
     public function dashboard()
     {
         $totalUsers = User::active()->count();
@@ -27,13 +29,13 @@ class AdminController extends Controller
         $todayAbsent = Attendance::today()->absent()->count();
         $todaySchedules = Schedule::today()->with('participants')->get();
         $latestAttendances = Attendance::today()->with('user')->latest()->take(10)->get();
-        
-        // Weekly statistics
+
+        // Chart Data Last 7 Days
         $weeklyLabels = [];
         $weeklyPresent = [];
         $weeklyLate = [];
         $weeklyAbsent = [];
-        
+
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
             $weeklyLabels[] = $date->format('D');
@@ -41,35 +43,23 @@ class AdminController extends Controller
             $weeklyLate[] = Attendance::whereDate('date', $date)->late()->count();
             $weeklyAbsent[] = Attendance::whereDate('date', $date)->absent()->count();
         }
-        
+
         return view('admin.dashboard.index', compact(
-            'totalUsers', 'todayPresent', 'todayLate', 'todayAbsent',
-            'todaySchedules', 'latestAttendances',
-            'weeklyLabels', 'weeklyPresent', 'weeklyLate', 'weeklyAbsent'
+            'totalUsers','todayPresent','todayLate','todayAbsent',
+            'todaySchedules','latestAttendances',
+            'weeklyLabels','weeklyPresent','weeklyLate','weeklyAbsent'
         ));
     }
 
-    // ============================================
-    // Users Management
-    // ============================================
-    public function usersIndex()
-    {
-        $users = User::all();
-        return view('admin.users.index', compact('users'));
-    }
-    
-    public function usersCreate()
-    {
-        return view('admin.users.create');
-    }
+    /**
+     * USERS MANAGEMENT
+     */
+    public function usersIndex() { $users = User::all(); return view('admin.users.index', compact('users')); }
 
-    public function usersEdit($id)
-    {
-        $user = User::findOrFail($id);
+    public function usersCreate() { return view('admin.users.create'); }
 
-        return view('admin.users.edit', compact('user'));
-    }
-    
+    public function usersEdit($id) { $user = User::findOrFail($id); return view('admin.users.edit', compact('user')); }
+
     public function usersStore(Request $request)
     {
         $request->validate([
@@ -79,72 +69,134 @@ class AdminController extends Controller
             'password' => 'required|min:6',
             'role' => 'required|in:admin,pimpinan,anggota',
         ]);
-        
+
         $data = $request->except('photo');
         $data['password'] = Hash::make($request->password);
-        
+
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('users', 'public');
         }
-        
+
         User::create($data);
         return redirect()->route('admin.users.index')->with('success', 'User berhasil ditambahkan');
     }
-    
+
+    public function usersUpdate(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'role' => 'required|string',
+            'status' => 'nullable|boolean',
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'role' => $request->role,
+        ];
+
+        if ($request->has('status')) $data['is_active'] = $request->boolean('status');
+        if ($request->filled('password')) $data['password'] = Hash::make($request->password);
+
+        $user->update($data);
+
+        return redirect()->route('admin.users.index')->with('success', 'User berhasil diperbarui');
+    }
+
     public function usersDestroy($id)
     {
-        User::findOrFail($id)->delete();
+        $user = User::findOrFail($id);
+        if ($user->photo) Storage::disk('public')->delete($user->photo);
+        $user->delete();
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus');
     }
 
-    // ============================================
-    // Schedules Management
-    // ============================================
+    /**
+     * SCHEDULES MANAGEMENT
+     */
     public function schedulesIndex()
     {
         $schedules = Schedule::with('participants')->latest('date')->get();
         return view('admin.schedules.index', compact('schedules'));
     }
-    
+
     public function schedulesCreate()
     {
-        $users = User::active()->get();
+        $users = User::active()->orderBy('name')->get();
         return view('admin.schedules.create', compact('users'));
     }
 
     public function schedulesEdit($id)
     {
         $schedule = Schedule::findOrFail($id);
-
-        return view('admin.schedules.edit', [
-            'schedule' => $schedule
-        ]);
+        return view('admin.schedules.edit', compact('schedule'));
     }
 
-    public function schedulesUpdate(Request $request, $id)
+    public function schedulesStore(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'required',
             'date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required',
-            'is_active' => 'nullable|boolean',
+            'type' => 'required',
         ]);
 
-        $schedule = Schedule::findOrFail($id);
+        $schedule = Schedule::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'date' => $request->date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'location' => $request->location,
+            'type' => $request->type,
+            'status' => 'scheduled',
+            'created_by' => auth()->id(),
+        ]);
 
-        $schedule->title = $request->title;
-        $schedule->date = $request->date;
-        $schedule->start_time = $request->start_time;
-        $schedule->end_time = $request->end_time;
-        $schedule->is_active = $request->is_active ?? 1;
+        if ($request->participant_ids) $schedule->participants()->attach($request->participant_ids);
 
-        $schedule->save();
-
-        return redirect()
-            ->route('admin.schedules.index')
-            ->with('success', 'Jadwal berhasil diperbarui.');
+        return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil ditambahkan');
     }
+
+    public function schedulesUpdate(Request $request, $id)
+{
+    $request->validate([
+        'title'       => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'date'        => 'required|date',
+        'start_time'  => 'required',
+        'end_time'    => 'required|after:start_time',
+        'location'    => 'required|string|max:255',
+        'type'        => 'required|in:meeting,training,event,other',
+        'status'      => 'required|in:scheduled,ongoing,completed,cancelled',
+    ]);
+
+    $schedule = \App\Models\Schedule::findOrFail($id);
+
+    $schedule->update([
+        'title'       => $request->title,
+        'description' => $request->description,
+        'date'        => $request->date,
+        'start_time'  => $request->start_time,
+        'end_time'    => $request->end_time,
+        'location'    => $request->location,
+        'type'        => $request->type,
+        'status'      => $request->status,
+        // kalau kamu punya kolom is_active dan mau diubah via form,
+        // tambahkan input di Blade dan aktifkan baris ini:
+        // 'is_active'   => $request->boolean('is_active'),
+    ]);
+
+    return redirect()
+        ->route('admin.schedules.index')
+        ->with('success', 'Jadwal berhasil diperbarui');
+}
+
 
     public function schedulesDestroy($id)
     {
@@ -162,43 +214,9 @@ class AdminController extends Controller
             ->with('success', 'Jadwal berhasil dihapus.');
     }
 
-
-
-    
-    public function schedulesStore(Request $request)
-    {
-        $request->validate([
-            'title' => 'required',
-            'date' => 'required|date',
-            'start_time' => 'required',
-            'end_time' => 'required',
-            'type' => 'required',
-        ]);
-        
-        $schedule = Schedule::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'date' => $request->date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'location' => $request->location,
-            'type' => $request->type,
-            'status' => 'scheduled',
-            'created_by' => auth()->id(),
-        ]);
-        
-        if ($request->participant_ids) {
-            foreach ($request->participant_ids as $userId) {
-                $schedule->participants()->attach($userId);
-            }
-        }
-        
-        return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil ditambahkan');
-    }
-
-    // ============================================
-    // Attendances Management (FIXED)
-    // ============================================
+    /**
+     * ATTENDANCE MANAGEMENT (WITHOUT FACE)
+     */
     public function attendancesIndex(Request $request)
     {
         $date = $request->get('date', now()->format('Y-m-d'));
@@ -207,15 +225,8 @@ class AdminController extends Controller
 
         $query = Attendance::with('user')->whereDate('date', $date);
 
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        if ($department) {
-            $query->whereHas('user', function($q) use ($department) {
-                $q->where('department', $department);
-            });
-        }
+        if ($status) $query->where('status', $status);
+        if ($department) $query->whereHas('user', fn($q)=>$q->where('department', $department));
 
         $attendances = $query->latest('created_at')->paginate(50);
 
@@ -226,39 +237,35 @@ class AdminController extends Controller
             'absent' => Attendance::whereDate('date', $date)->where('status', 'absent')->count(),
         ];
 
-        $departments = User::whereNotNull('department')
-            ->distinct()
-            ->pluck('department')
-            ->filter();
-
-        // 🔥 tambahkan ini
+        $departments = User::whereNotNull('department')->distinct()->pluck('department')->filter();
         $users = User::orderBy('name')->get();
 
-        return view('admin.attendances.index', compact(
-            'attendances',
-            'todayStats',
-            'departments',
-            'users'  // 🔥 wajib
-        ));
+        return view('admin.attendances.index', compact('attendances','todayStats','departments','users'));
     }
 
-    
-    public function attendancesUpdateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $id)
     {
+        $request->validate([
+            'status' => 'required|in:present,late,absent,excused,leave'
+        ]);
+
         $attendance = Attendance::findOrFail($id);
-        $attendance->update(['status' => $request->status]);
-        
-        return response()->json(['success' => true]);
+        $attendance->status = $request->status;
+        $attendance->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status berhasil diperbarui.',
+            'status' => $attendance->status
+        ], 200);
     }
 
     public function attendancesHistory($id)
     {
-        $logs = \App\Models\AttendanceLog::where('attendance_id', $id)
-            ->with('user')
-            ->latest()
-            ->get();
-        
-        return response()->json($logs);
+        $user = User::findOrFail($id);
+        $attendances = Attendance::where('user_id', $id)->with('user')->latest('date')->paginate(50);
+
+        return view('admin.attendances.history', compact('user', 'attendances'));
     }
 
     // ============================================
@@ -284,150 +291,7 @@ class AdminController extends Controller
         return view('admin.history.index', compact('attendances', 'users'));
     }
 
-    /**
-     * Show Record Attendance Form
-     */
-    public function recordAttendance()
-    {
-        $users = User::where('is_active', true)
-            ->orderBy('name')
-            ->get();
-            
-        $schedules = Schedule::whereDate('date', now())
-            ->where('is_active', true)
-            ->get();
-            
-        $todayAttendances = Attendance::with('user')
-            ->whereDate('date', now())
-            ->latest()
-            ->take(10)
-            ->get();
-
-        return view('admin.attendances.record', compact('users', 'schedules', 'todayAttendances'));
-    }
-
-    /**
-     * Store Manual Attendance Record
-     */
-    public function storeAttendance(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'date' => 'required|date',
-            'type' => 'required|in:check_in,check_out',
-            'time' => 'required',
-            'status' => 'required|in:present,late,absent,excused,leave',
-            'photo' => 'required|string',
-        ]);
-
-        try {
-            // Find or create attendance record
-            $attendance = Attendance::firstOrNew([
-                'user_id' => $request->user_id,
-                'date' => $request->date,
-            ]);
-
-            // Process base64 photo
-            $photoPath = null;
-            if ($request->photo) {
-                $imageData = $request->photo;
-                
-                // Remove data:image/jpeg;base64, prefix
-                $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
-                $imageData = str_replace(' ', '+', $imageData);
-                
-                // Generate unique filename
-                $imageName = 'attendance_' . $request->user_id . '_' . time() . '.jpg';
-                
-                // Save to storage
-                Storage::disk('public')->put('attendance/' . $imageName, base64_decode($imageData));
-                $photoPath = 'attendance/' . $imageName;
-            }
-
-            // Update based on attendance type
-            if ($request->type == 'check_in') {
-                $attendance->check_in_time = $request->time;
-                $attendance->check_in_photo = $photoPath;
-                $attendance->check_in_confidence = 1.0; // Manual entry = 100% confidence
-                $attendance->check_in_location = $request->location;
-                $attendance->check_in_device = 'Admin Panel';
-            } else {
-                $attendance->check_out_time = $request->time;
-                $attendance->check_out_photo = $photoPath;
-                $attendance->check_out_confidence = 1.0;
-                $attendance->check_out_location = $request->location;
-                $attendance->check_out_device = 'Admin Panel';
-                
-                // Calculate work duration if check-in exists
-                if ($attendance->check_in_time) {
-                    $checkIn = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $attendance->check_in_time);
-                    $checkOut = Carbon::parse($attendance->date->format('Y-m-d') . ' ' . $request->time);
-                    $attendance->work_duration = $checkIn->diffInMinutes($checkOut);
-                }
-            }
-
-            // Update other fields
-            $attendance->status = $request->status;
-            $attendance->schedule_id = $request->schedule_id;
-            $attendance->notes = $request->notes;
-            $attendance->save();
-
-            // Create attendance log
-            AttendanceLog::create([
-                'attendance_id' => $attendance->id,
-                'user_id' => auth()->id(),
-                'action' => $request->type == 'check_in' ? 'check_in' : 'check_out',
-                'description' => 'Manual entry by admin: ' . auth()->user()->name,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Kehadiran berhasil disimpan',
-                'data' => [
-                    'attendance_id' => $attendance->id,
-                    'user' => $attendance->user->name,
-                    'type' => $request->type,
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Bulk Import Attendance (CSV/Excel)
-     */
-    public function bulkImportAttendance(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,xlsx,xls',
-        ]);
-
-        try {
-            // Process bulk import here
-            // You can use Laravel Excel package
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Import berhasil'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-
-
-    // ============================================
+     // ============================================
     // Attendance Report (with Export)
     // ============================================
     public function attendanceReport(Request $request)
@@ -648,3 +512,4 @@ class AdminController extends Controller
         }
     }
 }
+

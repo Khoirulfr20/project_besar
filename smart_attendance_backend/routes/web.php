@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminAttendanceFaceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,38 +11,28 @@ use App\Http\Controllers\Admin\AdminAuthController;
 |--------------------------------------------------------------------------
 */
 
-// Redirect root ke halaman login admin
-Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+// Redirect root
+Route::get('/', fn() => redirect()->route('admin.login'));
 
 // ==================== ADMIN ROUTES ====================
 Route::prefix('admin')->name('admin.')->group(function () {
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Guest routes (belum login)
-    |--------------------------------------------------------------------------
-    */
+
+    // ---------- GUEST (belum login) ----------
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
     });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Authenticated admin routes (sudah login)
-    |--------------------------------------------------------------------------
-    */
+
+    // ---------- AUTHENTICATED ADMIN ----------
     Route::middleware(['auth'])->group(function () {
         // Logout
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
-        
+
         // Dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        
-        // ==================== USERS MANAGEMENT ====================
-        Route::prefix('users')->name('users.')->group(function () {
+
+        // ==================== USERS ====================
+       Route::prefix('users')->name('users.')->group(function () {
             Route::get('/', [AdminController::class, 'usersIndex'])->name('index');
             Route::get('/create', [AdminController::class, 'usersCreate'])->name('create');
             Route::post('/', [AdminController::class, 'usersStore'])->name('store');
@@ -51,7 +42,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{id}/toggle-status', [AdminController::class, 'usersToggleStatus'])->name('toggle-status');
         });
         
-        // ==================== SCHEDULES MANAGEMENT ====================
+        // ==================== SCHEDULES ====================
         Route::prefix('schedules')->name('schedules.')->group(function () {
             Route::get('/', [AdminController::class, 'schedulesIndex'])->name('index');
             Route::get('/create', [AdminController::class, 'schedulesCreate'])->name('create');
@@ -60,34 +51,46 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{id}', [AdminController::class, 'schedulesUpdate'])->name('update');
             Route::delete('/{id}', [AdminController::class, 'schedulesDestroy'])->name('destroy');
         });
-        
-        // ==================== ATTENDANCES MANAGEMENT ====================
-        Route::prefix('attendances')->name('attendances.')->group(function () {
+
+       // ==================== ATTENDANCES MANAGEMENT ====================
+       Route::prefix('attendances')->name('attendances.')->group(function () {
             Route::get('/', [AdminController::class, 'attendancesIndex'])->name('index');
-            Route::put('/{id}/status', [AdminController::class, 'attendancesUpdateStatus'])->name('updateStatus');
+            Route::put('/{id}/status', [AdminController::class, 'updateStatus'])->name('updateStatus'); // FIX
             Route::get('/{id}/history', [AdminController::class, 'attendancesHistory'])->name('history');
         });
-        
-        // ==================== RECORD ATTENDANCE ====================
+
+
+        // ==================== RECORD MANUAL + FACE ====================
         Route::prefix('attendance')->name('attendance.')->group(function () {
-            Route::get('/record', [AdminController::class, 'recordAttendance'])->name('record');
-            Route::post('/record', [AdminController::class, 'storeAttendance'])->name('store');
+            // Manual (punya kamu, biarkan)
+            Route::get('/record', [AdminAttendanceFaceController::class, 'record'])->name('record');
+            Route::post('/record', [AdminAttendanceFaceController::class, 'storeManual'])->name('storeManual');
+
+            // Face Recognition (VIEW)
+            Route::get('/face', [AdminAttendanceFaceController::class, 'faceRecord'])->name('face.record');
+
+            // Face Recognition (AJAX from Blade)
+            Route::post('/face/recognize', [AdminAttendanceFaceController::class, 'faceRecognize'])
+                ->name('face.recognize');
+
+            Route::post('/face/save-attendance', [AdminAttendanceFaceController::class, 'faceSaveAttendance'])
+                ->name('face.saveAttendance');
+
+            Route::post('/face/register', [AdminAttendanceFaceController::class, 'faceRegister'])
+                ->name('face.register');
+
+            // (kalau kamu masih pakai)
             Route::post('/bulk-import', [AdminController::class, 'bulkImportAttendance'])->name('bulkImport');
         });
-        
-        // ==================== LAPORAN KEHADIRAN (NEW) ====================
+
+        // ==================== REPORTS ====================
         Route::prefix('reports')->name('reports.')->group(function () {
-            // Halaman Laporan Kehadiran dengan Filter & Chart
             Route::get('/attendance', [AdminController::class, 'attendanceReport'])->name('attendance');
-            
-            // Export Laporan (Excel, PDF, CSV)
             Route::get('/export', [AdminController::class, 'exportReport'])->name('export');
         });
-        
-        // ==================== HISTORY ====================
+
+        // History + Settings
         Route::get('/history', [AdminController::class, 'historyIndex'])->name('history.index');
-        
-        // ==================== SETTINGS ====================
         Route::get('/settings', [AdminController::class, 'settingsIndex'])->name('settings.index');
         Route::put('/settings', [AdminController::class, 'settingsUpdate'])->name('settings.update');
         Route::post('/settings/clear-cache', [AdminController::class, 'settingsClearCache'])->name('settings.clear-cache');

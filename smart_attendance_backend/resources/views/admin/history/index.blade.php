@@ -124,7 +124,6 @@
                         <th>User</th>
                         <th>Check-In</th>
                         <th>Check-Out</th>
-                        <th>Durasi</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -155,14 +154,6 @@
                                 <span class="badge bg-info">{{ $att->check_out_time }}</span>
                             @else
                                 <span class="text-muted">-</span>
-                            @endif
-                        </td>
-
-                        <td>
-                            @if($att->work_duration)
-                                {{ floor($att->work_duration/60) }}j {{ $att->work_duration%60 }}m
-                            @else
-                                -
                             @endif
                         </td>
 

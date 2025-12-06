@@ -11,14 +11,17 @@ class FaceData extends Model
 
     protected $table = 'face_data';
 
+    protected $guarded = [];
+
     protected $fillable = [
         'user_id',
         'face_encoding',
         'face_photo',
+        'registration_photo',
         'face_sample_number',
         'quality_score',
         'is_primary',
-        'is_active',
+        'face_registered_at',
     ];
 
     protected $casts = [

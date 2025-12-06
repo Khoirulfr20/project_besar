@@ -14,18 +14,28 @@
         </a>
 
         {{-- Right Section --}}
-        <div class="d-flex align-items-center ms-auto">
-            <span class="text-white me-3 d-flex align-items-center small fw-semibold">
+        <div class="dropdown ms-auto">
+            <button class="btn btn-sm text-white d-flex align-items-center dropdown-toggle"
+                    type="button" id="userMenu"
+                    data-bs-toggle="dropdown" aria-expanded="false"
+                    style="font-size: 0.9rem; font-weight: 600;">
                 <i class="fas fa-user-circle me-1"></i> {{ auth()->user()->name }}
-            </span>
+            </button>
 
-            <form action="{{ route('admin.logout') }}" method="POST" class="m-0">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-light logout-btn">
-                    <i class="fas fa-sign-out-alt me-1"></i> Logout
-                </button>
-            </form>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userMenu">
+                {{-- Logout --}}
+                <li>
+                    <form action="{{ route('admin.logout') }}" method="POST" class="m-0 p-0">
+                        @csrf
+                        <button type="submit" class="dropdown-item text-danger fw-semibold">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </button>
+                    </form>
+                </li>
+
+            </ul>
         </div>
+
     </div>
 </nav>
 
@@ -41,17 +51,21 @@
         letter-spacing: 0.3px;
     }
 
-    /* Logout button */
-    .logout-btn {
-        font-size: 0.8rem;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-weight: 600;
-        color: #444 !important;
+    /* Dropdown */
+    .dropdown-menu {
+        border-radius: 10px;
+        font-size: 0.9rem;
+        padding: 6px 0;
     }
 
-    .logout-btn:hover {
-        background: #ffffffd9;
+    .dropdown-item {
+        padding: 9px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f2f2f2;
     }
 
     /* Mobile */
@@ -60,6 +74,6 @@
     }
 
     .navbar-toggler:focus {
-        box-shadow: none;
+        box-shadow: none !important;
     }
 </style>

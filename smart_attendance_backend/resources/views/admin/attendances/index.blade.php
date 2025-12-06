@@ -1,6 +1,6 @@
 {{-- ========================================================= --}}
 {{-- File: resources/views/admin/attendances/index.blade.php --}}
-{{-- Kelola Kehadiran (Modern, Simple, Clean UI) --}}
+{{-- Kelola Kehadiran (Simple • Modern • Clean • With Photo Preview) --}}
 {{-- ========================================================= --}}
 @extends('layouts.app')
 @section('title', 'Kelola Kehadiran')
@@ -8,80 +8,74 @@
 @section('content')
 
 {{-- HEADER --}}
-<div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="fw-semibold m-0">Kelola Kehadiran</h4>
     <a href="{{ route('admin.reports.attendance') }}" class="btn btn-primary rounded-3">
         <i class="fas fa-chart-bar me-1"></i> Lihat Laporan
     </a>
 </div>
 
-{{-- FILTER (Sederhana & To the point) --}}
-<div class="card border-0 shadow-sm rounded-4 mb-3">
+{{-- FILTER --}}
+<div class="card border-0 shadow-sm rounded-3 mb-3">
     <div class="card-body">
-
-        <div class="row g-3">
-
-            {{-- Tanggal --}}
+        <div class="row g-2">
             <div class="col-md-4">
-                <label class="form-label fw-medium">Tanggal</label>
-                <input type="date" id="filterDate" 
-                       class="form-control form-control-modern" 
+                <label class="form-label small fw-medium">Tanggal</label>
+                <input type="date" id="filterDate" class="form-control form-control-modern"
                        value="{{ request('date', date('Y-m-d')) }}">
             </div>
 
-            {{-- Status --}}
             <div class="col-md-4">
-                <label class="form-label fw-medium">Status</label>
+                <label class="form-label small fw-medium">Status</label>
                 <select id="filterStatus" class="form-select form-select-modern">
                     <option value="">Semua Status</option>
-                    <option value="present">Hadir</option>
-                    <option value="late">Terlambat</option>
-                    <option value="absent">Alfa</option>
-                    <option value="excused">Izin</option>
-                    <option value="leave">Cuti</option>
+                    <option value="present" {{ request('status')=='present'?'selected':'' }}>Hadir</option>
+                    <option value="late"    {{ request('status')=='late'?'selected':'' }}>Terlambat</option>
+                    <option value="absent"  {{ request('status')=='absent'?'selected':'' }}>Alfa</option>
+                    <option value="excused" {{ request('status')=='excused'?'selected':'' }}>Izin</option>
+                    <option value="leave"   {{ request('status')=='leave'?'selected':'' }}>Cuti</option>
                 </select>
             </div>
 
-            {{-- USER (Pengganti Departemen) --}}
             <div class="col-md-4">
-                <label class="form-label fw-medium">User</label>
+                <label class="form-label small fw-medium">User</label>
                 <select id="filterUser" class="form-select form-select-modern">
                     <option value="">Semua User</option>
                     @foreach($users as $u)
-                        <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->employee_id }})</option>
+                        <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
+                            {{ $u->name }} ({{ $u->employee_id }})
+                        </option>
                     @endforeach
                 </select>
             </div>
-
         </div>
 
-        <div class="text-end mt-3">
-            <button class="btn btn-primary rounded-3 px-4" onclick="applyFilter()">
+        <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-outline-secondary rounded-3 me-2" onclick="clearFilter()">Reset</button>
+            <button class="btn btn-primary rounded-3" onclick="applyFilter()">
                 <i class="fas fa-filter me-1"></i> Filter
             </button>
         </div>
-
     </div>
 </div>
 
-{{-- STATISTIK HARI INI --}}
+{{-- STATISTIK --}}
 <div class="row g-3 mb-3">
-
     @php 
         $cards = [
-            ['val'=>$todayStats['present'], 'label'=>'Hadir',       'bg'=>'success'],
-            ['val'=>$todayStats['late'],    'label'=>'Terlambat',   'bg'=>'warning'],
-            ['val'=>$todayStats['excused'], 'label'=>'Izin',        'bg'=>'info'],
-            ['val'=>$todayStats['absent'],  'label'=>'Tidak Hadir', 'bg'=>'danger'],
+            ['val'=>$todayStats['present'], 'label'=>'Hadir',       'bg'=>'#28a745'],
+            ['val'=>$todayStats['late'],    'label'=>'Terlambat',   'bg'=>'#ffc107'],
+            ['val'=>$todayStats['excused'], 'label'=>'Izin',        'bg'=>'#17a2b8'],
+            ['val'=>$todayStats['absent'],  'label'=>'Tidak Hadir', 'bg'=>'#dc3545'],
         ];
     @endphp
 
     @foreach($cards as $c)
-    <div class="col-md-3">
-        <div class="card text-white bg-{{ $c['bg'] }} rounded-4 shadow-sm">
+    <div class="col-6 col-md-3">
+        <div class="card shadow-sm rounded-3">
             <div class="card-body text-center py-3">
-                <h3 class="mb-0 fw-bold">{{ $c['val'] }}</h3>
-                <small>{{ $c['label'] }}</small>
+                <h3 class="fw-bold" style="color:{{ $c['bg'] }}">{{ $c['val'] }}</h3>
+                <small class="text-muted">{{ $c['label'] }}</small>
             </div>
         </div>
     </div>
@@ -89,95 +83,91 @@
 </div>
 
 {{-- TABLE --}}
-<div class="card shadow-sm border-0 rounded-4">
-    <div class="card-header bg-light rounded-top-4 py-3 d-flex justify-content-between align-items-center">
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
         <span class="fw-semibold">Daftar Kehadiran</span>
-        <span class="badge bg-primary rounded-pill">{{ $attendances->total() }}</span>
+        <span class="badge rounded-pill px-3" style="background:linear-gradient(90deg,#667eea,#764ba2);">
+            {{ $attendances->total() }}
+        </span>
     </div>
 
-    <div class="card-body">
-
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table id="attendanceTable" class="table table-hover align-middle">
-                <thead class="table-light">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
                     <tr>
                         <th>No</th>
                         <th>Tanggal</th>
                         <th>User</th>
                         <th>Check-In</th>
                         <th>Check-Out</th>
-                        <th>Durasi</th>
                         <th>Status</th>
-                        <th>Aksi</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @forelse($attendances as $i => $att)
                     <tr>
-                        {{-- No --}}
                         <td>{{ $attendances->firstItem() + $i }}</td>
-
-                        {{-- Tanggal --}}
                         <td>{{ $att->date->format('d/m/Y') }}</td>
 
-                        {{-- USER --}}
+                        {{-- USER + AVATAR PREVIEW --}}
                         <td>
                             <div class="d-flex align-items-center">
-
-                                {{-- Avatar --}}
                                 @if($att->user->photo)
-                                    <img src="{{ Storage::url($att->user->photo) }}" 
-                                         class="rounded-circle me-2" width="32" height="32">
+                                    <img src="{{ Storage::url($att->user->photo) }}"
+                                         width="40" height="40"
+                                         class="rounded-circle me-2 avatar-preview"
+                                         data-photo="{{ Storage::url($att->user->photo) }}"
+                                         style="object-fit:cover; cursor:pointer;">
                                 @else
-                                    <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center me-2" 
-                                         style="width:32px; height:32px;">
-                                         {{ substr($att->user->name,0,1) }}
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center me-2"
+                                         style="width:40px;height:40px;
+                                         background:linear-gradient(90deg,#667eea,#764ba2);
+                                         color:white;font-weight:bold;">
+                                        {{ strtoupper(substr($att->user->name,0,1)) }}
                                     </div>
                                 @endif
-
-                                <div class="lh-sm">
+                                <div>
                                     <strong>{{ $att->user->name }}</strong><br>
                                     <small class="text-muted">{{ $att->user->employee_id }}</small>
                                 </div>
-
                             </div>
                         </td>
 
-                        {{-- Check-In --}}
+                        {{-- CHECK-IN PHOTO --}}
                         <td>
                             @if($att->check_in_time)
-                                <span class="badge bg-success">{{ $att->check_in_time }}</span>
+                                <span class="badge checkin-photo"
+                                      data-photo="{{ $att->check_in_photo ? Storage::url($att->check_in_photo) : '' }}"
+                                      style="background:#e4f7ec;color:#176b2b;cursor:pointer;">
+                                      {{ $att->check_in_time }}
+                                </span>
                             @else
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
 
-                        {{-- Check-Out --}}
+                        {{-- CHECK-OUT PHOTO --}}
                         <td>
                             @if($att->check_out_time)
-                                <span class="badge bg-info">{{ $att->check_out_time }}</span>
+                                <span class="badge checkout-photo"
+                                      data-photo="{{ $att->check_out_photo ? Storage::url($att->check_out_photo) : '' }}"
+                                      style="background:#eaf6ff;color:#0b4a60;cursor:pointer;">
+                                      {{ $att->check_out_time }}
+                                </span>
                             @else
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
 
-                        {{-- Durasi --}}
-                        <td>
-                            @if($att->work_duration)
-                                {{ floor($att->work_duration / 60) }}j {{ $att->work_duration % 60 }}m
-                            @else
-                                <span class="text-muted">-</span>
-                            @endif
-                        </td>
-
-                        {{-- STATUS (Editable) --}}
+                        {{-- STATUS --}}
                         <td>
                             <select class="form-select form-select-sm rounded-3 status-select"
                                     data-id="{{ $att->id }}"
                                     data-original="{{ $att->status }}"
                                     data-name="{{ $att->user->name }}"
-                                    data-employee-id="{{ $att->user->employee_id }}"
+                                    data-employee="{{ $att->user->employee_id }}"
                                     data-date="{{ $att->date->format('d/m/Y') }}">
                                 <option value="present" {{ $att->status=='present'?'selected':'' }}>Hadir</option>
                                 <option value="late"    {{ $att->status=='late'?'selected':'' }}>Terlambat</option>
@@ -186,186 +176,217 @@
                                 <option value="leave"   {{ $att->status=='leave'?'selected':'' }}>Cuti</option>
                             </select>
                         </td>
-
-                        {{-- AKSI --}}
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary rounded-3" onclick="viewHistory({{ $att->id }})">
-                                <i class="fas fa-history"></i>
-                            </button>
-                            @if($att->notes)
-                            <button class="btn btn-sm btn-outline-secondary rounded-3" onclick="viewNotes(`{{ addslashes($att->notes) }}`)">
-                                <i class="fas fa-sticky-note"></i>
-                            </button>
-                            @endif
-                        </td>
-                    </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center py-5">
-                            <i class="fas fa-inbox fa-3x text-muted d-block mb-2"></i>
-                            <h6 class="text-muted">Tidak ada data kehadiran</h6>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="fas fa-inbox text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">Tidak ada data kehadiran</p>
                         </td>
                     </tr>
                     @endforelse
                 </tbody>
-
             </table>
         </div>
 
-        <div class="mt-3">
+        <div class="p-3">
             {{ $attendances->links() }}
         </div>
-
     </div>
 </div>
 
+{{-- PHOTO PREVIEW MODAL --}}
+<div class="modal fade" id="photoModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-body p-0">
+        <img id="photoModalImg" class="img-fluid w-100 rounded">
+      </div>
+      <div class="p-2 text-end">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @endsection
+
+
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// ====================================================
-// FILTER
-// ====================================================
-function applyFilter() {
-    const date  = $('#filterDate').val();
-    const stat  = $('#filterStatus').val();
-    const user  = $('#filterUser').val();
+document.addEventListener("DOMContentLoaded", () => {
 
-    let url = '{{ route("admin.attendances.index") }}?';
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
-    if (date) url += `date=${date}&`;
-    if (stat) url += `status=${stat}&`;
-    if (user) url += `user=${user}`;
+    /* ------------------------------- */
+    /* FILTER BUTTON                  */
+    /* ------------------------------- */
+    window.applyFilter = () => {
+        const params = new URLSearchParams();
 
-    window.location.href = url;
-}
+        const date = filterDate.value;
+        const stat = filterStatus.value;
+        const user = filterUser.value;
 
-// ====================================================
-// POPUP NOTES
-// ====================================================
-function viewNotes(notes) {
-    Swal.fire({
-        title: 'Catatan',
-        html: `<div class='p-3 bg-light rounded text-start'>${notes}</div>`,
-        confirmButtonText: 'Tutup',
-        confirmButtonColor: '#667eea'
-    });
-}
+        if(date) params.append("date", date);
+        if(stat) params.append("status", stat);
+        if(user) params.append("user_id", user);
 
-// ====================================================
-// HISTORY
-// ====================================================
-function viewHistory(id) {
-    Swal.fire({
-        title: 'Memuat...',
-        html: '<div class="spinner-border text-primary"></div>',
-        showConfirmButton: false
-    });
+        window.location.href = "{{ route('admin.attendances.index') }}?" + params.toString();
+    };
 
-    $.get(`/admin/attendances/${id}/history`, function(res) {
+    window.clearFilter = () =>
+        window.location.href = "{{ route('admin.attendances.index') }}";
 
-        let html = "<div class='list-group text-start'>";
 
-        if (res.length > 0) {
-            res.forEach(log => {
-                html += `
-                    <div class="list-group-item">
-                        <strong>${log.action}</strong>
-                        <p class="mb-1">${log.description ?? ''}</p>
-                        <small class="text-muted">${log.created_at}</small>
-                    </div>
-                `;
+    /* ------------------------------- */
+    /* PREVIEW FOTO (Avatar + CI + CO) */
+    /* ------------------------------- */
+    document.addEventListener("click", (e) => {
+
+        const target = e.target.closest(".avatar-preview, .checkin-photo, .checkout-photo");
+        if (!target) return;
+
+        const photo = target.dataset.photo;
+
+        if (!photo) {
+            Swal.fire({
+                icon: "info",
+                title: "Tidak ada foto",
+                text: "Foto tidak tersedia untuk data ini.",
+                confirmButtonColor: "#667eea"
             });
-        } else {
-            html = "<p class='text-muted text-center py-3'>Tidak ada histori</p>";
-        }
-
-        Swal.fire({
-            title: 'Histori Kehadiran',
-            html,
-            width: '600px',
-            confirmButtonText: 'Tutup',
-            confirmButtonColor: '#667eea'
-        });
-
-    });
-}
-
-// ====================================================
-// PERUBAHAN STATUS
-// ====================================================
-$('.status-select').change(function () {
-
-    const el = $(this);
-    const id = el.data('id');
-    const newStatus = el.val();
-    const oldStatus = el.data('original');
-
-    const name = el.data('name');
-    const emp  = el.data('employee-id');
-    const date = el.data('date');
-
-    Swal.fire({
-        title: 'Ubah Status?',
-        html: `
-            <div class='text-start'>
-                <strong>${name}</strong> (${emp}) <br>
-                <small class='text-muted'>${date}</small>
-
-                <hr>
-                <p>Status baru: <span class='badge bg-primary'>${newStatus}</span></p>
-            </div>
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, ubah',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: '#667eea',
-        cancelButtonColor: '#6c757d'
-    })
-    .then(res => {
-
-        if (!res.isConfirmed) {
-            el.val(oldStatus);
             return;
         }
 
+        document.getElementById("photoModalImg").src = photo;
+        new bootstrap.Modal(document.getElementById("photoModal")).show();
+    });
+
+
+    /* ------------------------------- */
+    /* CATATAN */
+    /* ------------------------------- */
+    window.viewNotes = (notes) => {
         Swal.fire({
-            title: 'Menyimpan...',
+            title: "Catatan",
+            html: `<div class="text-start">${notes}</div>`,
+            confirmButtonText: "Tutup",
+            confirmButtonColor: "#667eea"
+        });
+    };
+
+
+    /* ------------------------------- */
+    /* HISTORI */
+    /* ------------------------------- */
+    window.viewHistory = (id) => {
+
+        Swal.fire({
+            title: 'Memuat...',
+            html: '<div class="spinner-border text-primary"></div>',
             showConfirmButton: false,
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            allowOutsideClick: false
         });
 
-        $.ajax({
-            url: `/admin/attendances/${id}/status`,
-            method: 'PUT',
-            data: {
-                status: newStatus,
-                _token: '{{ csrf_token() }}'
-            },
-            success: function () {
+        fetch(`/admin/attendances/${id}/history`)
+            .then(res => res.json())
+            .then(data => {
+
+                let html = "<div class='list-group text-start'>";
+
+                if (data.length) {
+                    data.forEach(log => {
+                        html += `
+                            <div class="list-group-item">
+                                <strong>${log.action ?? "-"}</strong><br>
+                                <small class="text-muted">${log.created_at}</small>
+                                <div>${log.description ?? ""}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = "<p class='text-muted text-center py-3'>Tidak ada histori</p>";
+                }
+
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    timer: 1200,
+                    title: "Histori Kehadiran",
+                    html,
+                    width: "650px",
+                    confirmButtonText: "Tutup",
+                    confirmButtonColor: "#667eea"
+                });
+            });
+    };
+
+
+    /* ------------------------------- */
+    /* UBAH STATUS */
+    /* ------------------------------- */
+    document.addEventListener("change", (e) => {
+        const sel = e.target.closest(".status-select");
+        if (!sel) return;
+
+        const id = sel.dataset.id;
+        const oldStatus = sel.dataset.original;
+        const newStatus = sel.value;
+
+        Swal.fire({
+            title: "Ubah Status?",
+            html: `
+                <div class="text-start">
+                    <strong>${sel.dataset.name}</strong> (${sel.dataset.employee})<br>
+                    <small class="text-muted">${sel.dataset.date}</small>
+                    <hr>
+                    Status baru:
+                    <span class="badge" style="background:#667eea">${newStatus}</span>
+                </div>`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#667eea",
+            cancelButtonText: "Batal"
+        }).then(result => {
+            if (!result.isConfirmed) {
+                sel.value = oldStatus;
+                return;
+            }
+
+            Swal.fire({ title:'Menyimpan...', showConfirmButton:false, didOpen:()=>Swal.showLoading() });
+
+            fetch(`/admin/attendances/${id}/status`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": csrf
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (!res.success) throw res;
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Status Berhasil Disimpan",
+                    timer: 900,
                     showConfirmButton: false
                 });
-                el.data('original', newStatus);
-            },
-            error: function () {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal',
-                    text: 'Tidak dapat mengubah status',
-                    confirmButtonColor: '#d33'
-                });
-                el.val(oldStatus);
-            }
-        });
 
+                sel.dataset.original = newStatus;
+
+                setTimeout(() => location.reload(), 950);
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Gagal Mengubah Status",
+                    text: "Terjadi kesalahan pada server."
+                });
+                sel.value = oldStatus;
+            });
+        });
     });
 
 });
@@ -374,11 +395,23 @@ $('.status-select').change(function () {
 <style>
 .form-control-modern,
 .form-select-modern {
-    border-radius: 12px;
-    padding: 10px;
+    border-radius: 10px;
+    padding: 8px 12px;
+    border: 1px solid rgba(102,126,234,0.25);
 }
-.status-select:hover {
-    box-shadow: 0 0 0 .15rem rgba(102,126,234,.25);
+
+.avatar-preview:hover,
+.checkin-photo:hover,
+.checkout-photo:hover {
+    transform: scale(1.03);
+    transition: .12s ease;
+    opacity: .9;
+}
+
+.table th, .table td { vertical-align: middle; }
+
+@media(max-width: 720px) {
+    .main-content { padding: 1rem; }
 }
 </style>
 @endpush

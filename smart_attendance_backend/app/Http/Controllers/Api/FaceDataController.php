@@ -9,49 +9,86 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FaceData;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
 class FaceDataController extends Controller
 {
     public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
-            'face_encoding' => 'required|string',
-            'photo' => 'required|image|max:5120',
-            'quality_score' => 'nullable|numeric|min:0|max:1',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'user_id' => 'required|exists:users,id',
+        'photo' => 'required|image|max:5120',
+    ]);
 
-        if ($validator->fails()) {
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation error',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+        try {
+            // Upload foto sementara ke storage
+            $photoPath = $request->file('photo')->store('faces', 'public');
+            $absolutePhotoPath = storage_path('app/public/' . $photoPath);
+
+            // === KIRIM FOTO KE PYTHON API ===
+            $pythonUrl = env('PYTHON_FACE_API_URL') . '/encode';
+
+            $response = \Http::attach(
+                'file', file_get_contents($absolutePhotoPath), basename($absolutePhotoPath)
+            )->post($pythonUrl);
+
+            if ($response->failed()) {
+                Storage::disk('public')->delete($photoPath);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengenali wajah dari server Python'
+                ], 500);
+            }
+
+            $result = $response->json();
+            if (!$result['success']) {
+                Storage::disk('public')->delete($photoPath);
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'] ?? 'Encoding gagal'
+                ], 400);
+            }
+
+            // === SAVE KE DATABASE ===
+            $encoding = implode(',', $result['encoding']);
+            $quality = $result['quality'];
+
+            $sampleNumber = FaceData::where('user_id', $request->user_id)->max('face_sample_number') + 1;
+
+            $faceData = FaceData::create([
+                'user_id' => $request->user_id,
+                'face_encoding' => $encoding,
+                'face_photo' => $photoPath,
+                'face_sample_number' => $sampleNumber,
+                'quality_score' => $quality,
+                'is_primary' => $sampleNumber === 1,
+                'registration_source' => 'admin_panel'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Registrasi wajah berhasil',
+                'data' => $faceData
+            ], 201);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Store photo
-        $photoPath = $request->file('photo')->store('faces', 'public');
-
-        // Get next sample number
-        $sampleNumber = FaceData::where('user_id', $request->user_id)->max('face_sample_number') + 1;
-
-        $faceData = FaceData::create([
-            'user_id' => $request->user_id,
-            'face_encoding' => $request->face_encoding,
-            'face_photo' => $photoPath,
-            'face_sample_number' => $sampleNumber,
-            'quality_score' => $request->quality_score ?? 0,
-            'is_primary' => $sampleNumber === 1,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Face data berhasil disimpan',
-            'data' => $faceData
-        ], 201);
     }
+
 
     public function getUserFaces($userId)
     {

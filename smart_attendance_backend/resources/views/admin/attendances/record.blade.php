@@ -5,7 +5,7 @@
 
 {{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-    <h4 class="fw-semibold text-dark m-0">Record Attendance</h4>
+    <h4 class="fw-semibold text-dark m-0"><i class="fas fa-user-check me-2"></i> Record Attendance (Manual Backup)</h4>
 </div>
 
 <div class="row">
@@ -14,12 +14,12 @@
     <div class="col-md-4">
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-header bg-primary text-white rounded-top-4">
-                <h6 class="m-0"><i class="fas fa-camera me-1"></i> Ambil Foto</h6>
+                <h6 class="m-0"><i class="fas fa-camera me-1"></i> Ambil Foto Manual</h6>
             </div>
 
             <div class="card-body">
 
-                {{-- Camera Live --}}
+                {{-- Live Camera --}}
                 <div id="cameraContainer">
                     <video id="video" autoplay class="w-100 rounded-3"></video>
                     <canvas id="canvas" style="display:none;"></canvas>
@@ -30,7 +30,7 @@
                     <img id="previewImage" class="w-100 rounded-3 shadow-sm">
                 </div>
 
-                {{-- Camera Buttons --}}
+                {{-- Buttons --}}
                 <div class="d-grid gap-2 mt-3">
                     <button id="captureBtn" class="btn btn-primary" onclick="capturePhoto()">
                         <i class="fas fa-camera me-1"></i> Ambil Foto
@@ -59,7 +59,7 @@
     <div class="col-md-8">
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-header bg-primary text-white rounded-top-4">
-                <h6 class="m-0"><i class="fas fa-file-signature me-1"></i> Isi Kehadiran</h6>
+                <h6 class="m-0"><i class="fas fa-file-signature me-1"></i> Isi Form Absensi Manual</h6>
             </div>
 
             <div class="card-body">
@@ -74,9 +74,7 @@
                             <select class="form-select rounded-3" id="userId" name="user_id" required>
                                 <option value="">Pilih User</option>
                                 @foreach($users as $user)
-                                <option value="{{ $user->id }}"
-                                        data-name="{{ $user->name }}"
-                                        data-employee-id="{{ $user->employee_id }}">
+                                <option value="{{ $user->id }}">
                                     {{ $user->name }} ({{ $user->employee_id }})
                                 </option>
                                 @endforeach
@@ -124,8 +122,21 @@
                             </select>
                         </div>
 
+                        {{-- REASON MANUAL BACKUP --}}
                         <div class="col-md-12">
-                            <label class="form-label fw-medium">Catatan</label>
+                            <label class="form-label fw-medium">Alasan Input Manual *</label>
+                            <select class="form-select rounded-3" id="manual_reason" name="manual_reason" required>
+                                <option value="">Pilih Alasan</option>
+                                <option value="face_not_detected">Wajah tidak terdeteksi</option>
+                                <option value="camera_problem">Kamera bermasalah</option>
+                                <option value="guest_or_non_registered">Tamu / Non-Anggota</option>
+                                <option value="network_issue">Jaringan/Server bermasalah</option>
+                                <option value="urgent_manual_override">Override darurat oleh admin</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-medium">Catatan (Opsional)</label>
                             <textarea class="form-control rounded-3" id="notes" name="notes" rows="3"></textarea>
                         </div>
 
@@ -140,7 +151,7 @@
                     {{-- Submit --}}
                     <div class="d-grid mt-3">
                         <button type="submit" class="btn btn-success btn-lg rounded-3" id="submitBtn" disabled>
-                            <i class="fas fa-check-circle me-1"></i> Simpan Kehadiran
+                            <i class="fas fa-check-circle me-1"></i> Simpan Kehadiran Manual
                         </button>
                     </div>
 
@@ -193,7 +204,6 @@
 @endsection
 
 @push('scripts')
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
@@ -222,7 +232,6 @@ function capturePhoto() {
     photoData = canvas.toDataURL("image/jpeg");
     document.getElementById("photoData").value = photoData;
 
-    // Show preview
     previewImage.src = photoData;
     cameraContainer.style.display = "none";
     photoPreview.style.display = "block";
@@ -231,7 +240,6 @@ function capturePhoto() {
     submitBtn.disabled = false;
     photoWarning.style.display = "none";
 
-    // stop camera
     video.srcObject.getTracks().forEach(t => t.stop());
 }
 
@@ -254,15 +262,18 @@ async function submitAttendance(e) {
     e.preventDefault();
     if (!photoData) return Swal.fire("Foto Belum Ada", "Silakan ambil foto dulu!", "warning");
 
+    const reason = document.getElementById("manual_reason").value;
+    if (!reason) return Swal.fire("Alasan Dibutuhkan", "Silakan pilih alasan input manual!", "warning");
+
     const fd = new FormData(e.target);
 
     Swal.fire({
-        title: "Simpan Kehadiran?",
+        title: "Simpan Kehadiran Manual?",
         icon: "question",
         showCancelButton: true,
         confirmButtonColor: "#28a745",
         cancelButtonColor: "#6c757d",
-        confirmButtonText: "Simpan",
+        confirmButtonText: "Ya, Simpan",
         cancelButtonText: "Batal"
     }).then((res) => {
         if (res.isConfirmed) {
@@ -274,7 +285,7 @@ async function submitAttendance(e) {
             .then(r => r.json())
             .then(r => {
                 if (r.success) {
-                    Swal.fire("Berhasil!", "Kehadiran sudah disimpan.", "success").then(() => location.reload());
+                    Swal.fire("Berhasil!", "Kehadiran manual tersimpan.", "success").then(() => location.reload());
                 } else {
                     Swal.fire("Gagal", r.message, "error");
                 }
@@ -286,11 +297,4 @@ async function submitAttendance(e) {
 // INIT
 window.onload = startCamera;
 </script>
-
-{{-- STYLING --}}
-<style>
-    .form-control, .form-select {
-        border-radius: 10px;
-    }
-</style>
 @endpush

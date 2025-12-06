@@ -38,7 +38,7 @@
                 <select name="user" class="form-select rounded-3">
                     <option value="">Semua User</option>
                     @foreach($users as $u)
-                        <option value="{{ $u->id }}" {{ request('user') == $u->id ? 'selected' : '' }}>
+                        <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
                             {{ $u->name }} ({{ $u->employee_id }})
                         </option>
                     @endforeach
@@ -157,7 +157,7 @@
 
     <div class="card-body">
 
-        <div class="table-responsive">
+        <div class="card-body p-0 table-responsive">
             <table id="reportTable" class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
@@ -167,7 +167,6 @@
                         <th>ID Karyawan</th>
                         <th>Check-In</th>
                         <th>Check-Out</th>
-                        <th>Durasi</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -183,14 +182,7 @@
                         <td>{{ $att->check_in_time ?? '-' }}</td>
                         <td>{{ $att->check_out_time ?? '-' }}</td>
 
-                        <td>
-                            @if($att->work_duration)
-                                {{ floor($att->work_duration / 60) }}j 
-                                {{ $att->work_duration % 60 }}m
-                            @else
-                                -
-                            @endif
-                        </td>
+                        
 
                         <td>
                             <span class="badge 

@@ -34,14 +34,32 @@
         <!-- Divider -->
         <div class="text-muted small mt-3 mb-1 px-2">KEHADIRAN</div>
 
-        <!-- Record Attendance -->
+        <!-- Record Attendance Dropdown -->
         <li class="nav-item mb-1">
-            <a class="nav-link d-flex align-items-center
-                {{ request()->routeIs('admin.attendance.record') ? 'active' : '' }}"
-                href="{{ route('admin.attendance.record') }}">
+            <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#recordMenu">
                 <i class="fas fa-user-check me-2"></i> Record Attendance
+                <i class="fas fa-angle-down ms-auto"></i>
             </a>
+            <div class="collapse" id="recordMenu">
+                <ul class="list-unstyled ps-3">
+                    <li>
+                        <a class="nav-link {{ request()->routeIs('admin.attendance.record') ? 'active' : '' }}"
+                        href="{{ route('admin.attendance.record') }}">
+                            <i class="fas fa-pen me-2"></i> Manual Record
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link {{ request()->routeIs('admin.attendance.face.record') ? 'active' : '' }}"
+                        href="{{ route('admin.attendance.face.record') }}">
+                            <i class="fas fa-camera me-2"></i> Face Record
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
+
+
+
 
         <!-- Kelola Kehadiran -->
         <li class="nav-item mb-1">
