@@ -6,7 +6,7 @@
 {{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
     <h4 class="fw-semibold text-dark m-0">
-        <i class="fas fa-face-smile me-2"></i> Record Attendance (Face Recognition)
+        <i class="fas fa-face-smile me-2"></i> Pengenalan Wajah (Face Recognition)
     </h4>
 </div>
 
@@ -16,7 +16,7 @@
     <div class="col-12 mb-3">
         <div class="btn-group w-100">
             <button type="button" id="modeAttendance" class="btn btn-primary active" onclick="switchMode('attendance')">
-                <i class="fas fa-fingerprint me-1"></i> Scan Absensi
+                <i class="fas fa-fingerprint me-1"></i> Scan Wajah
             </button>
 
             <button type="button" id="modeRegister" class="btn btn-outline-primary" onclick="switchMode('register')">
@@ -279,13 +279,26 @@ async function capturePhoto() {
 function switchMode(mode) {
     currentMode = mode;
 
+    const modeAttendance = document.getElementById("modeAttendance");
+    const modeRegister = document.getElementById("modeRegister");
+
     document.getElementById("attendanceFormBox").style.display = mode === 'attendance' ? "block" : "none";
     document.getElementById("registerFormBox").style.display = mode === 'register' ? "block" : "none";
 
-    modeAttendance.classList.toggle("btn-primary", mode === 'attendance');
-    modeAttendance.classList.toggle("btn-outline-primary", mode !== 'attendance');
-    modeRegister.classList.toggle("btn-primary", mode === 'register');
-    modeRegister.classList.toggle("btn-outline-primary", mode !== 'register');
+    // Update class untuk efek fokus
+    if (mode === 'attendance') {
+        modeAttendance.classList.remove("btn-outline-primary");
+        modeAttendance.classList.add("btn-primary", "active");
+        
+        modeRegister.classList.remove("btn-primary", "active");
+        modeRegister.classList.add("btn-outline-primary");
+    } else {
+        modeRegister.classList.remove("btn-outline-primary");
+        modeRegister.classList.add("btn-primary", "active");
+        
+        modeAttendance.classList.remove("btn-primary", "active");
+        modeAttendance.classList.add("btn-outline-primary");
+    }
 
     document.getElementById("resultBox").style.display = "none";
     document.getElementById("waitingBox").style.display = "block";
@@ -318,7 +331,6 @@ async function sendToRecognition() {
     document.getElementById("recognizedConfidence").innerHTML = (recognized.confidence * 100).toFixed(2) + "%";
 }
 
-/* ===================== SAVE ATTENDANCE ==================== */
 /* ===================== SAVE ATTENDANCE ==================== */
 function saveAttendance() {
     if (!recognized) 
@@ -354,7 +366,6 @@ function saveAttendance() {
             : Swal.fire("Gagal", d.message, "error");
     });
 }
-
 
 /* ===================== REGISTER FACE ==================== */
 async function submitRegister(e) {
@@ -393,4 +404,38 @@ async function submitRegister(e) {
 /* ===================== INIT ==================== */
 window.onload = startCamera;
 </script>
+@endpush
+
+@push('styles')
+<style>
+    /* Efek fokus untuk tombol mode */
+    .btn-group .btn {
+        transition: all 0.3s ease;
+    }
+
+    /* Tombol aktif */
+    .btn-group .btn.active.btn-primary {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.5) !important;
+        transform: scale(1.02);
+    }
+
+    /* Tombol tidak aktif */
+    .btn-group .btn.btn-outline-primary {
+        background-color: transparent;
+        color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn-group .btn.btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    /* Hapus outline default browser */
+    .btn-group .btn:focus {
+        outline: none;
+    }
+</style>
 @endpush

@@ -10,31 +10,32 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # ✅ Tambahkan logger DI SINI (sejajar dengan flutter, bukan di dalamnya)
+  logger: ^2.0.2+1
+
   # UI & Icons
   cupertino_icons: ^1.0.6
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
+  flutter_spinkit: ^5.2.0
 
   # State Management
   provider: ^6.1.1
 
   # Network & API
-  http: ^1.1.2
   dio: ^5.4.0
+  http: ^1.1.2
 
-  # Local Storage
+  # Local Storage (Sanctum Token)
   shared_preferences: ^2.2.2
 
-  # Face Recognition & Camera
-  google_mlkit_face_detection: ^0.10.0
+  # Camera & Face Recognition
   camera: ^0.10.5+9
+  google_mlkit_face_detection: ^0.10.0
   image_picker: ^1.0.7
   image: ^4.1.7
 
-  # Date & Time
-  intl: ^0.19.0
-
-  # PDF & Excel Export
+  # Export (PDF & Excel)
   pdf: ^3.10.8
   path_provider: ^2.1.2
   open_filex: ^4.3.4
@@ -45,8 +46,8 @@ dependencies:
   # Charts
   fl_chart: ^0.66.0
 
-  # Loading
-  flutter_spinkit: ^5.2.0
+  # Date Formatting
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
@@ -56,7 +57,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # assets:
-    #- assets/images/
-    #- assets/icons/
-    #- assets/logo/
+  assets:
+  - assets/images/download.png

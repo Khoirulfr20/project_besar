@@ -5,7 +5,7 @@
 
 {{-- HEADER --}}
 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-    <h4 class="fw-semibold text-dark m-0"><i class="fas fa-user-check me-2"></i> Record Attendance (Manual Backup)</h4>
+    <h4 class="fw-semibold text-dark m-0"><i class="fas fa-user-check me-2"></i> Rekam Wajah Manual</h4>
 </div>
 
 <div class="row">

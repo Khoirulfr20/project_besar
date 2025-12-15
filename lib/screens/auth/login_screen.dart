@@ -76,18 +76,22 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo
+                  // Logo - Ganti dengan gambar
                   Container(
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      color:
+                          Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.face_retouching_natural,
-                      size: 60,
-                      color: Theme.of(context).primaryColor,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/download.png',
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -165,49 +169,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     isBlock: true,
                   ),
                   const SizedBox(height: 24),
-
-                  // Demo Credentials
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Demo Credentials:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[900],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Admin: admin@smartattendance.com / admin123',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                        Text(
-                          'Pimpinan: pimpinan@smartattendance.com / pimpinan123',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                        Text(
-                          'Anggota: anggota@smartattendance.com / anggota123',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),

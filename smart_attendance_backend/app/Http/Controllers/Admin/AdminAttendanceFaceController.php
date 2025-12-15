@@ -351,42 +351,56 @@ public function register(Request $request)
 
 public function faceRecognize(Request $request)
 {
-    $request->validate(['photo' => 'required|file|image']);
+    $request->validate([
+        'photo' => 'required|file|image'
+    ]);
 
     $file = $request->file('photo');
     $binary = file_get_contents($file->getRealPath());
 
-    // Kirim ke Python dengan nama field "image" (bukan photo)
     $response = Http::timeout(10)
         ->attach('image', $binary, 'photo.jpg')
-        ->post(config('services.face_api.url') . '/recognize');
+        ->post(env('PYTHON_FACE_API_URL') . '/recognize');
 
     if (! $response->ok()) {
-        return response()->json(['success' => false, 'message' => 'Tidak dapat menghubungi Face API.'], 500);
+        return response()->json([
+            'success' => false,
+            'message' => 'Tidak dapat menghubungi Face API.'
+        ], 500);
     }
 
     $body = $response->json();
+
     if (!($body['success'] ?? false)) {
-        return response()->json(['success' => false, 'message' => $body['message'] ?? 'Wajah tidak dikenali.']);
+        return response()->json([
+            'success' => false,
+            'message' => $body['message'] ?? 'Wajah tidak dikenali.'
+        ]);
     }
 
-    $data = $body['data'];
-    $user = User::find($data['user_id']);
+    $userId     = $body['data']['user_id'];
+    $confidence = $body['data']['confidence'];
 
-    if (! $user) {
-        return response()->json(['success' => false, 'message' => 'User tidak ditemukan di database.']);
+    $user = User::find($userId);
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User tidak ditemukan.'
+        ]);
     }
 
     return response()->json([
         'success' => true,
         'data' => [
-            'id'          => $user->id,
-            'name'        => $user->name,
+            'id' => $user->id,
+            'name' => $user->name,
             'employee_id' => $user->employee_id,
-            'confidence'  => $data['confidence'],
-        ],
+            'confidence' => $confidence
+        ]
     ]);
 }
+
 
 
 

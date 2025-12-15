@@ -8,7 +8,6 @@ import '../screens/pimpinan/pimpinan_dashboard.dart';
 import '../screens/pimpinan/history_screen.dart' as pimpinan;
 import '../screens/common/notifications_screen.dart';
 import '../screens/face/face_capture_screen.dart';
-import '../screens/face/face_registration_screen.dart';
 
 class Routes {
   static const String splash = '/';
@@ -60,13 +59,6 @@ class AppRoutes {
           builder: (_) =>
               FaceCaptureScreen(isCheckOut: args?['isCheckOut'] ?? false),
         );
-
-      case Routes.faceRegistration:
-        final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => FaceRegistrationScreen(userId: args['userId']),
-        );
-
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

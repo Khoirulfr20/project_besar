@@ -1,85 +1,140 @@
 import 'package:flutter/material.dart';
-import 'package:smart_attendance/models/notification_model.dart';
 import '../models/attendance_model.dart';
 import '../services/attendance_service.dart';
 
-// ============================================
-// Attendance Provider
-// ============================================
 class AttendanceProvider with ChangeNotifier {
-  final AttendanceService _service = AttendanceService();
+  final AttendanceService _attendanceService = AttendanceService();
 
   List<Attendance> _attendances = [];
   Attendance? _todayAttendance;
-  AttendanceStatistics? _statistics;
+  Map<String, dynamic>? _statistics;
   bool _isLoading = false;
 
   List<Attendance> get attendances => _attendances;
   Attendance? get todayAttendance => _todayAttendance;
-  AttendanceStatistics? get statistics => _statistics;
+  Map<String, dynamic>? get statistics => _statistics;
   bool get isLoading => _isLoading;
 
-  Future<void> getTodayAttendance() async {
-    _todayAttendance = await _service.getTodayAttendance();
-    notifyListeners();
-  }
-
+  /// ✅ Check-in
   Future<Map<String, dynamic>> checkIn({
     required String photoPath,
-    required double confidence,
     int? scheduleId,
-    String? location,
   }) async {
-    final result = await _service.checkIn(
+    debugPrint('🔵 CHECK-IN: Starting...');
+    debugPrint('📸 Photo path: $photoPath');
+    debugPrint('📅 Schedule ID: $scheduleId');
+
+    final result = await _attendanceService.checkIn(
       photoPath: photoPath,
-      confidence: confidence,
       scheduleId: scheduleId,
-      location: location,
     );
 
-    if (result['success']) {
+    debugPrint('✅ CHECK-IN Result: $result');
+
+    // ✅ Reload today attendance after check-in
+    if (result['success'] == true) {
       await getTodayAttendance();
     }
 
     return result;
   }
 
+  /// ✅ Check-out
   Future<Map<String, dynamic>> checkOut({
     required String photoPath,
-    required double confidence,
-    String? location,
   }) async {
-    final result = await _service.checkOut(
+    debugPrint('🔵 CHECK-OUT: Starting...');
+    debugPrint('📸 Photo path: $photoPath');
+
+    final result = await _attendanceService.checkOut(
       photoPath: photoPath,
-      confidence: confidence,
-      location: location,
     );
 
-    if (result['success']) {
+    debugPrint('✅ CHECK-OUT Result: $result');
+
+    // ✅ Reload today attendance after check-out
+    if (result['success'] == true) {
       await getTodayAttendance();
     }
 
     return result;
   }
 
+  /// ✅ Get Today's Attendance
+  Future<void> getTodayAttendance() async {
+    try {
+      debugPrint('🔍 Loading today attendance...');
+      _todayAttendance = await _attendanceService.getTodayAttendance();
+      debugPrint('✅ Today attendance loaded: ${_todayAttendance?.id}');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error loading today attendance: $e');
+    }
+  }
+
+  /// ✅ Load my attendance
   Future<void> loadMyAttendance({String? startDate, String? endDate}) async {
     _isLoading = true;
     notifyListeners();
 
-    _attendances = await _service.getMyAttendance(
-      startDate: startDate,
-      endDate: endDate,
-    );
+    try {
+      debugPrint('🔍 Loading my attendance...');
+      debugPrint('📅 Date range: $startDate to $endDate');
 
-    _isLoading = false;
-    notifyListeners();
-  }
+      _attendances = await _attendanceService.getMyAttendance(
+        startDate: startDate,
+        endDate: endDate,
+      );
 
-  Future<void> loadStatistics() async {
-    final data = await _service.getStatistics();
-    if (data != null) {
-      _statistics = AttendanceStatistics.fromJson(data);
+      debugPrint('✅ Loaded ${_attendances.length} attendance records');
+      for (var a in _attendances) {
+        debugPrint('   - ${a.date}: ${a.status} (user_id: ${a.userId})');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading attendance: $e');
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// ✅ Load Statistics
+  Future<void> loadStatistics({String? startDate, String? endDate}) async {
+    try {
+      debugPrint('🔍 Loading statistics...');
+      _statistics = await _attendanceService.getStatistics(
+        startDate: startDate,
+        endDate: endDate,
+      );
+      debugPrint('✅ Statistics loaded: $_statistics');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error loading statistics: $e');
+    }
+  }
+
+  /// ✅ Get statistics (tanpa save ke state)
+  Future<Map<String, dynamic>?> getStatistics({
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      return await _attendanceService.getStatistics(
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } catch (e) {
+      debugPrint('❌ Error loading statistics: $e');
+      return null;
+    }
+  }
+
+  /// Clear data (untuk logout)
+  void clear() {
+    _attendances = [];
+    _todayAttendance = null;
+    _statistics = null;
+    _isLoading = false;
+    notifyListeners();
   }
 }

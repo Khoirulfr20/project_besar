@@ -4,9 +4,6 @@ import json
 from typing import Optional, List
 from datetime import datetime
 
-# ==========================
-# IMPORT LIBRARY
-# ==========================
 import numpy as np
 import cv2
 from PIL import Image
@@ -16,11 +13,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import mysql.connector
-import base64
-
 
 # ==========================
-# LOAD ENV
+# ENV
 # ==========================
 load_dotenv()
 
@@ -32,202 +27,157 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "smart_attendance"),
 }
 
-FACE_DISTANCE_THRESHOLD = float(os.getenv("FACE_DISTANCE_THRESHOLD", "0.6"))
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-
-
-def debug_print(*args):
-    if DEBUG:
-        print(*args)
-
+FACE_DISTANCE_THRESHOLD = float(os.getenv("FACE_DISTANCE_THRESHOLD", "12.0"))
 
 # ==========================
-# FASTAPI APP
+# APP
 # ==========================
 app = FastAPI(title="SmartAttendance Face API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # sementara boleh semua
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-def get_db_connection():
+def get_db():
     return mysql.connector.connect(**DB_CONFIG)
-
 
 # ==========================
 # FACE UTILS
 # ==========================
-CASCADE_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-FACE_CASCADE = cv2.CascadeClassifier(CASCADE_PATH)
+CASCADE = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
 
-
-def compute_quality_score(cv2_img) -> float:
+def extract_embedding(cv2_img):
     gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    fm = cv2.Laplacian(gray, cv2.CV_64F).var()
-    score = (fm - 50.0) / (500.0 - 50.0)
-    score = max(0.0, min(1.0, score))
-    return float(score)
 
+    # Tambahan: tingkatkan kontras (PENTING untuk kondisi agak gelap)
+    gray = cv2.equalizeHist(gray)
 
-def extract_face_embedding(cv2_img) -> Optional[List[float]]:
-    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-    faces = FACE_CASCADE.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5)
+    faces = CASCADE.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=3,
+        minSize=(80, 80)
+    )
 
     if len(faces) == 0:
-        debug_print("No face detected")
         return None
 
-    x, y, w, h = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)[0]
-    face_region = gray[y:y + h, x:x + w]
+    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    face = gray[y:y+h, x:x+w]
 
-    if face_region.size == 0:
-        debug_print("Empty face region")
-        return None
+    face = cv2.resize(face, (64, 64))
+    face = face.astype("float32") / 255.0
 
-    face_resized = cv2.resize(face_region, (32, 32))
-    norm = face_resized.astype("float32") / 255.0
-    embedding = norm.flatten()
-    return embedding.tolist()
+    return face.flatten().tolist()
 
 
-def euclidean_distance(e1: List[float], e2: List[float]) -> float:
-    a = np.array(e1, dtype=np.float32)
-    b = np.array(e2, dtype=np.float32)
-    return float(np.linalg.norm(a - b))
 
+def euclidean(a, b) -> float:
+    return float(np.linalg.norm(np.array(a) - np.array(b)))
 
-def distance_to_confidence(dist: float, max_dist: float = None) -> float:
-    if max_dist is None:
-        max_dist = FACE_DISTANCE_THRESHOLD
-    raw = 1.0 - (dist / max_dist)
-    return float(max(0.0, min(1.0, raw)))
-
+def confidence(dist):
+    return max(0.0, min(1.0, 1.0 - (dist / FACE_DISTANCE_THRESHOLD)))
 
 # ==========================
 # HEALTH
 # ==========================
 @app.get("/health")
-async def health():
+def health():
     return {"status": "ok"}
 
+# ==========================
+# ENCODE
+# ==========================
+@app.post("/encode")
+async def encode(image: UploadFile = File(...)):
+    content = await image.read()
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    cv2_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-# ==========================
-# REGISTER FACE SIMPLE TEST
-# ==========================
-@app.post("/register-face")
-async def register_face(file: UploadFile = File(...)):
-    filename = f"face_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
-    with open(filename, "wb") as f:
-        f.write(await file.read())
+    embedding = extract_embedding(cv2_img)
+    if embedding is None:
+        return {"success": False, "message": "Wajah tidak terdeteksi."}
 
     return {
         "success": True,
-        "message": "Register endpoint OK (photo received)",
-        "filename": filename
+        "embedding": embedding,
+        "quality_score": 1.0
     }
 
+# ==========================
+# RECOGNIZE
+# ==========================
+@app.post("/recognize")
+async def recognize(image: UploadFile = File(...)):
+    content = await image.read()
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    cv2_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+    probe = extract_embedding(cv2_img)
+    if probe is None:
+        print("❌ GAGAL: Wajah tidak terdeteksi di gambar")
+        return {"success": False, "message": "Wajah tidak terdeteksi."}
+
+    conn = get_db()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("""
+        SELECT user_id, face_encoding
+        FROM face_data
+        WHERE is_active = 1 AND is_primary = 1
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    print(f"📊 Jumlah wajah terdaftar: {len(rows)}")
+
+    if len(rows) == 0:
+        print("⚠️ TIDAK ADA wajah terdaftar di database!")
+        return {
+            "success": False,
+            "message": "Tidak ada wajah terdaftar di database"
+        }
+
+    best_user = None
+    best_dist = None
+
+    for r in rows:
+        vec = json.loads(r["face_encoding"])
+        d = euclidean(probe, vec)
+        print(f"   User {r['user_id']}: distance = {d:.2f}")
+        if best_dist is None or d < best_dist:
+            best_dist = d
+            best_user = r["user_id"]
+
+    print(f"🎯 Best: User {best_user}, dist={best_dist:.2f}, threshold={FACE_DISTANCE_THRESHOLD}")
+
+    if best_dist is None or best_dist > FACE_DISTANCE_THRESHOLD:
+        return {
+            "success": False,
+            "message": f"Wajah tidak dikenali (distance: {best_dist:.2f})",
+            "data": {
+                "distance": best_dist,
+                "threshold": FACE_DISTANCE_THRESHOLD
+            }
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "user_id": best_user,
+            "distance": best_dist,
+            "confidence": confidence(best_dist)
+        }
+    }
 
 # ==========================
-# /encode (MAIN)
-# ==========================
-@app.post("/encode")
-async def encode_face(image: UploadFile = File(...)):
-    try:
-        content = await image.read()
-        pil_img = Image.open(io.BytesIO(content)).convert("RGB")
-        cv2_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-
-        quality = compute_quality_score(cv2_img)
-        embedding = extract_face_embedding(cv2_img)
-
-        if embedding is None:
-            return JSONResponse(
-                {"success": False, "message": "Wajah tidak terdeteksi."},
-                status_code=200,
-            )
-
-        return {"success": True, "embedding": embedding, "quality_score": quality}
-
-    except Exception as e:
-        debug_print("Error /encode:", e)
-        return JSONResponse(
-            {"success": False, "message": f"Error server: {str(e)}"},
-            status_code=500,
-        )
-
-
-# ==========================
-# MAIN RUNNER
+# RUN
 # ==========================
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
-# ==========================
-# ==========================
-# /recognize (FINAL USE)
-# ==========================
-@app.post("/recognize")
-async def recognize_face(image: UploadFile = File(...)):
-    try:
-        # === 1. Read Image ===
-        content = await image.read()
-        pil_img = Image.open(io.BytesIO(content)).convert("RGB")
-        cv2_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-
-        # === 2. Compute embedding ===
-        probe_embedding = extract_face_embedding(cv2_img)
-        if probe_embedding is None:
-            return JSONResponse({"success": False, "message": "Wajah tidak terdeteksi."}, status_code=200)
-
-        # === 3. Load database faces ===
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT user_id, face_encoding
-            FROM face_data
-            WHERE is_active = 1 AND face_encoding IS NOT NULL
-        """)
-        records = cursor.fetchall()
-        cursor.close()
-        conn.close()
-
-        if not records:
-            return JSONResponse({"success": False, "message": "Belum ada data wajah terdaftar."}, status_code=200)
-
-        # === 4. Compare distances ===
-        best_user = None
-        best_distance = None
-
-        for row in records:
-            try:
-                db_vec = json.loads(row["face_encoding"])
-                dist = euclidean_distance(probe_embedding, db_vec)
-
-                if best_distance is None or dist < best_distance:
-                    best_distance = dist
-                    best_user = row["user_id"]
-            except:
-                continue
-
-        # === 5. Compute Confidence ===
-        conf = distance_to_confidence(best_distance)
-
-        response = {
-            "success": True,
-            "message": "Wajah diproses.",
-            "data": {
-                "user_id": best_user,
-                "distance": best_distance,
-                "confidence": conf
-            }
-        }
-        return JSONResponse(response, status_code=200)
-
-    except Exception as e:
-        debug_print("Error /recognize:", e)
-        return JSONResponse({"success": False, "message": str(e)}, status_code=500)

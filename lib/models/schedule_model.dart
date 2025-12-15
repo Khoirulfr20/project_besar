@@ -44,18 +44,23 @@ class Schedule {
       startTime: json['start_time'],
       endTime: json['end_time'],
       location: json['location'],
-      type: json['type'],
-      status: json['status'],
-      createdBy: json['created_by'],
+      type: json['type'] ?? 'other',
+      status: json['status'] ?? 'scheduled',
+      createdBy: json['created_by'] ?? 0,
       isActive: json['is_active'] ?? true,
       creator: json['creator'] != null ? User.fromJson(json['creator']) : null,
       participants: json['participants'] != null
           ? (json['participants'] as List).map((e) => User.fromJson(e)).toList()
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
     );
   }
+
 
   Map<String, dynamic> toJson() {
     return {

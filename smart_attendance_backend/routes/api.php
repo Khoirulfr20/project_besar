@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Schedules
     Route::get('/schedules', [ScheduleController::class, 'index']);
     Route::get('/schedules/my', [ScheduleController::class, 'mySchedules']);
+    Route::get('/schedules/my/today-active', [ScheduleController::class, 'todayActiveSchedules']); // ✅ TAMBAHKAN INI
     Route::get('/schedules/{id}', [ScheduleController::class, 'show']);
 
     Route::middleware('role:admin,pimpinan')->group(function () {
@@ -38,14 +39,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/schedules/{id}', [ScheduleController::class, 'destroy']);
     });
 
-    // Attendance
+    // ✅ ATTENDANCE ROUTES (UPDATED)
     Route::prefix('attendance')->group(function () {
+        // User routes (all authenticated users)
         Route::post('/check-in', [AttendanceController::class, 'checkIn']);
         Route::post('/check-out', [AttendanceController::class, 'checkOut']);
         Route::get('/my', [AttendanceController::class, 'myAttendance']);
         Route::get('/today', [AttendanceController::class, 'todayAttendance']);
         Route::get('/statistics', [AttendanceController::class, 'statistics']);
 
+        // Admin/Pimpinan routes
         Route::middleware('role:admin,pimpinan')->group(function () {
             Route::get('/', [AttendanceController::class, 'index']);
             Route::get('/{id}', [AttendanceController::class, 'show']);

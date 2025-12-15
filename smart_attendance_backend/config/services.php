@@ -38,5 +38,10 @@ return [
     'face_api' => [
         'url' => env('FACE_API_URL', 'http://127.0.0.1:8001'),
     ],
+    'face' => [
+        'confidence_threshold' => env('FACE_CONFIDENCE_THRESHOLD', 0.75),
+        'distance_threshold' => env('FACE_DISTANCE_THRESHOLD', 0.55),
+    ],
+
 
 ];

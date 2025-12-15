@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
+import '../utils/app_logger.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -8,11 +8,17 @@ class ApiService {
   ApiService._internal();
 
   late Dio _dio;
+  late Dio _externalDio; // ✅ Untuk Python API
+
+  // ✅ FIX: Base URL harus jelas
+  static const String laravelBaseUrl = 'http://10.210.9.186:8000/api';
+  static const String pythonBaseUrl = 'http://10.210.9.186:8001';
 
   void initialize() {
+    // Dio untuk Laravel API
     _dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.baseUrl,
+        baseUrl: laravelBaseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {
@@ -22,7 +28,19 @@ class ApiService {
       ),
     );
 
-    // Add interceptors
+    // ✅ Dio terpisah untuk Python API (tanpa auth)
+    _externalDio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    // Add interceptors untuk Laravel API
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -31,21 +49,34 @@ class ApiService {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          
+          // ✅ Log request
+          AppLogger.debug('=== REQUEST ===');
+          AppLogger.debug('URL: ${options.baseUrl}${options.path}');
+          AppLogger.debug('Method: ${options.method}');
+          AppLogger.debug('Headers: ${options.headers}');
+          AppLogger.debug('Data: ${options.data}');
+          
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          // ✅ Log response
+          AppLogger.debug('=== RESPONSE ===');
+          AppLogger.debug('Status: ${response.statusCode}');
+          AppLogger.debug('Data: ${response.data}');
+          
+          return handler.next(response);
+        },
         onError: (error, handler) async {
-          // Handle 401 errors (token expired)
+          // ✅ Log error
+          AppLogger.error('=== ERROR ===');
+          AppLogger.error('URL: ${error.requestOptions.uri}');
+          AppLogger.error('Status: ${error.response?.statusCode}');
+          AppLogger.error('Message: ${error.message}');
+          AppLogger.error('Data: ${error.response?.data}');
+          
           if (error.response?.statusCode == 401) {
-            // Try to refresh token
-            final refreshed = await refreshToken();
-            if (refreshed) {
-              // Retry the request
-              final opts = error.requestOptions;
-              final token = await getToken();
-              opts.headers['Authorization'] = 'Bearer $token';
-              final response = await _dio.fetch(opts);
-              return handler.resolve(response);
-            }
+            await removeToken();
           }
           return handler.next(error);
         },
@@ -69,21 +100,7 @@ class ApiService {
     await prefs.remove('token');
   }
 
-  Future<bool> refreshToken() async {
-    try {
-      final response = await _dio.post('/auth/refresh');
-      if (response.statusCode == 200) {
-        final token = response.data['data']['token'];
-        await saveToken(token);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Generic HTTP Methods
+  // Generic HTTP Methods (Laravel API)
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -134,6 +151,29 @@ class ApiService {
     }
   }
 
+  // ✅ FIX: Method untuk panggil Python API
+  Future<Response> postExternal(
+    String url, {
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      AppLogger.debug('=== EXTERNAL REQUEST ===');
+      AppLogger.debug('URL: $url');
+      AppLogger.debug('Data: $data');
+      
+      final response = await _externalDio.post(url, data: data);
+      
+      AppLogger.debug('=== EXTERNAL RESPONSE ===');
+      AppLogger.debug('Status: ${response.statusCode}');
+      AppLogger.debug('Data: ${response.data}');
+      
+      return response;
+    } catch (e) {
+      AppLogger.error('External API error: $e');
+      rethrow;
+    }
+  }
+
   Future<Response> uploadFile(
     String path, {
     required String filePath,
@@ -164,10 +204,12 @@ class ApiService {
         case DioExceptionType.receiveTimeout:
           return 'Koneksi timeout. Cek koneksi internet Anda.';
         case DioExceptionType.badResponse:
-          return error.response?.data['message'] ??
-              'Terjadi kesalahan pada server';
+          final message = error.response?.data['message'];
+          return message ?? 'Terjadi kesalahan pada server (${error.response?.statusCode})';
         case DioExceptionType.cancel:
           return 'Request dibatalkan';
+        case DioExceptionType.connectionError:
+          return 'Tidak dapat terhubung ke server. Pastikan server berjalan.';
         default:
           return 'Tidak dapat terhubung ke server';
       }

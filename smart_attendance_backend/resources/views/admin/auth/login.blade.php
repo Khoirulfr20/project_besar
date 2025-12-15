@@ -100,9 +100,8 @@
 <body>
     <div class="login-card">
         
-
-        <div class="icon-wrap">
-            <i class="fas fa-user-shield"></i>
+        <div class="icon-wrap" style="background: none;">
+            <img src="{{ asset('images/download.png') }}" alt="logo" style="width:100px; height:100px; object-fit:contain;">
         </div>
 
         <h3 class="login-title mb-4">Login Admin</h3>

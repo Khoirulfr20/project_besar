@@ -1,0 +1,10 @@
+# Python venv
+venv/
+smart_attendance_python/venv/
+
+# Byte compiled files
+__pycache__/
+*.pyc
+
+# Others
+.env

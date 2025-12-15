@@ -1,14 +1,15 @@
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import '../../services/camera_service.dart';
-import '../../services/face_recognition_service.dart';
 import '../../providers/attendance_provider.dart';
+import '../../providers/schedule_provider.dart';
 
 class FaceCaptureScreen extends StatefulWidget {
   final bool isCheckOut;
-
   const FaceCaptureScreen({super.key, this.isCheckOut = false});
 
   @override
@@ -17,408 +18,533 @@ class FaceCaptureScreen extends StatefulWidget {
 
 class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   final CameraService _cameraService = CameraService();
-  final FaceRecognitionService _faceService = FaceRecognitionService();
 
-  bool _isInitialized = false;
+  bool _isInit = false;
   bool _isProcessing = false;
-  String _statusMessage = 'Posisikan wajah Anda';
-  String? _errorMessage;
+  String _status = 'Posisikan wajah Anda di dalam lingkaran';
+  String? _error;
+  String? _capturedImagePath;
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _initCamera().then((_) => _loadSchedules());
   }
 
-  /// ✅ INITIALIZE CAMERA DENGAN PERMISSION CHECK
-  Future<void> _initializeCamera() async {
+  Future<void> _loadSchedules() async {
+    if (widget.isCheckOut) return; // Tidak perlu schedule untuk check-out
+
+    final sp = Provider.of<ScheduleProvider>(context, listen: false);
+    await sp.loadTodayActiveSchedules();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _initCamera() async {
     try {
-      // Cek permission terlebih dahulu
-      final cameraStatus = await Permission.camera.status;
-
-      if (cameraStatus.isDenied) {
-        final result = await Permission.camera.request();
-
-        if (result.isDenied) {
-          setState(() {
-            _errorMessage =
-                'Akses kamera ditolak. Silakan berikan izin kamera.';
-          });
-          return;
-        }
-
-        if (result.isPermanentlyDenied) {
-          setState(() {
-            _errorMessage =
-                'Akses kamera ditolak secara permanen. Silakan aktifkan di pengaturan.';
-          });
+      if (!await Permission.camera.isGranted) {
+        if (!await Permission.camera.request().isGranted) {
+          setState(() => _error = 'Izin kamera ditolak. Aktifkan di pengaturan.');
           return;
         }
       }
-
-      if (cameraStatus.isPermanentlyDenied) {
-        setState(() {
-          _errorMessage =
-              'Akses kamera ditolak secara permanen. Silakan aktifkan di pengaturan.';
-        });
-        return;
-      }
-
-      // Setelah permission OK, baru initialize camera
       await _cameraService.initialize();
-
-      if (mounted) {
-        setState(() => _isInitialized = true);
-      }
+      if (mounted) setState(() => _isInit = true);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Gagal mengakses kamera: $e';
-        });
-      }
+      setState(() => _error = 'Tidak dapat mengakses kamera: $e');
     }
   }
 
   @override
   void dispose() {
-    _cameraService.dispose();
-    _faceService.dispose();
+    try {
+      _cameraService.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
-  Future<void> _captureAndVerify() async {
+  Future<void> _capture() async {
     if (_isProcessing) return;
 
     setState(() {
       _isProcessing = true;
-      _statusMessage = 'Memproses...';
+      _status = 'Mengambil foto...';
     });
 
     try {
-      // Take picture
       final imagePath = await _cameraService.takePicture();
-      if (imagePath == null) {
-        throw Exception('Gagal mengambil foto');
-      }
+      if (imagePath == null) throw Exception('Gagal mengambil gambar');
 
-      // Detect faces
-      final faces = await _faceService.detectFaces(imagePath);
+      // Simpan path gambar
+      _capturedImagePath = imagePath;
 
-      if (faces.isEmpty) {
-        throw Exception('Tidak ada wajah terdeteksi');
-      }
-
-      if (faces.length > 1) {
-        throw Exception('Terdeteksi lebih dari satu wajah');
-      }
-
-      // Extract embedding
-      await _faceService.extractFaceEmbedding(imagePath);
-
-      // Get quality score
-      final quality = await _faceService.getFaceQualityScore(imagePath);
-
-      if (quality < 0.6) {
-        throw Exception(
-            'Kualitas foto kurang baik. Pastikan pencahayaan cukup dan wajah terlihat jelas.');
-      }
-
-      // Simulated confidence
-      const confidence = 0.85;
-
-      // Submit attendance
-      final attendanceProvider =
-          Provider.of<AttendanceProvider>(context, listen: false);
-
-      Map<String, dynamic> result;
-      if (widget.isCheckOut) {
-        result = await attendanceProvider.checkOut(
-          photoPath: imagePath,
-          confidence: confidence,
-        );
-      } else {
-        result = await attendanceProvider.checkIn(
-          photoPath: imagePath,
-          confidence: confidence,
-        );
-      }
-
-      if (result['success']) {
-        _showSuccess(result['message']);
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) Navigator.pop(context, true);
-      } else {
-        throw Exception(result['message']);
-      }
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
       if (mounted) {
         setState(() {
+          _status = 'Foto berhasil diambil!';
           _isProcessing = false;
-          _statusMessage = 'Posisikan wajah Anda';
         });
+
+        // ✅ Jika check-out, langsung submit tanpa pilih jadwal
+        if (widget.isCheckOut) {
+          await _submitAttendance(null);
+        } else {
+          // ✅ Jika check-in, tampilkan dialog pilih jadwal
+          _showScheduleDialog();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'Posisikan wajah Anda di dalam lingkaran';
+        _isProcessing = false;
+      });
+      _show(false, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _showScheduleDialog() {
+    final sp = Provider.of<ScheduleProvider>(context, listen: false);
+    final schedules = sp.todayActiveSchedules;
+
+    if (schedules.isEmpty) {
+      _show(false, 'Tidak ada jadwal aktif hari ini.');
+      return;
+    }
+
+    int? selectedScheduleId;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.check_circle,
+                        color: Colors.green.shade700, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Pilih Jadwal',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Silakan pilih jadwal untuk absensi:',
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonFormField<int>(
+                      initialValue: selectedScheduleId,
+                      decoration: InputDecoration(
+                        labelText: 'Pilih Jadwal *',
+                        labelStyle: TextStyle(color: Colors.grey.shade700),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        border: InputBorder.none,
+                        prefixIcon: const Icon(Icons.schedule),
+                      ),
+                      isExpanded: true,
+                      items: schedules.map((s) {
+                        return DropdownMenuItem(
+                          value: s.id,
+                          child: Text(
+                            s.title,
+                            style: const TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        setDialogState(() {
+                          selectedScheduleId = v;
+                        });
+                      },
+                    ),
+                  ),
+                  if (selectedScheduleId == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, left: 4),
+                      child: Text(
+                        'Pilih jadwal terlebih dahulu',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    setState(() {
+                      _capturedImagePath = null;
+                      _status = 'Posisikan wajah Anda di dalam lingkaran';
+                    });
+                  },
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: selectedScheduleId == null
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                          _submitAttendance(selectedScheduleId!);
+                        },
+                  icon: const Icon(Icons.save),
+                  label: const Text('Simpan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitAttendance(int? scheduleId) async {
+    if (_capturedImagePath == null) return;
+
+    setState(() {
+      _isProcessing = true;
+      _status = widget.isCheckOut
+          ? 'Memproses check-out...'
+          : 'Memproses check-in...';
+    });
+
+    try {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('📸 SUBMIT ATTENDANCE START');
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('📁 Photo Path: $_capturedImagePath');
+      debugPrint('📅 Schedule ID: $scheduleId');
+      debugPrint('🔄 Is Check-Out: ${widget.isCheckOut}');
+      debugPrint('═══════════════════════════════════════');
+
+      final provider = Provider.of<AttendanceProvider>(context, listen: false);
+
+      // ✅ KIRIM FILE PATH LANGSUNG KE PROVIDER
+      Map<String, dynamic> result;
+      if (widget.isCheckOut) {
+        result = await provider.checkOut(
+          photoPath: _capturedImagePath!,
+        );
+      } else {
+        result = await provider.checkIn(
+          photoPath: _capturedImagePath!,
+          scheduleId: scheduleId,
+        );
+      }
+
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('📦 RESULT FROM BACKEND:');
+      debugPrint('   Success: ${result['success']}');
+      debugPrint('   Message: ${result['message']}');
+      debugPrint('═══════════════════════════════════════');
+
+      if (result['success'] == true) {
+        _show(true, result['message'] ?? 'Absensi berhasil!');
+        await Future.delayed(const Duration(milliseconds: 900));
+        if (mounted) Navigator.pop(context, true);
+      } else {
+        throw Exception(result['message'] ?? 'Absensi gagal');
+      }
+    } catch (e) {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('❌ ATTENDANCE ERROR:');
+      debugPrint('   ${e.toString()}');
+      debugPrint('═══════════════════════════════════════');
+
+      _show(false, e.toString().replaceFirst('Exception: ', ''));
+      setState(() {
+        _capturedImagePath = null;
+        _status = 'Gagal menyimpan absensi. Silakan coba lagi.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
     }
   }
 
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  void _showSuccess(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.green),
-      );
-    }
-  }
-
-  /// ✅ TAMBAHKAN TOMBOL BUKA SETTINGS
-  void _openSettings() async {
-    await openAppSettings();
+  void _show(bool success, String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.isCheckOut ? 'Check-Out' : 'Check-In'),
-      ),
-      body: _errorMessage != null
-          ? _buildErrorView()
-          : !_isInitialized
-              ? const Center(child: CircularProgressIndicator())
-              : _buildCameraView(),
-    );
-  }
-
-  /// ✅ ERROR VIEW WITH SETTINGS BUTTON
-  Widget _buildErrorView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.camera_alt_outlined, size: 80, color: Colors.grey),
-            const SizedBox(height: 24),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _openSettings,
-              icon: const Icon(Icons.settings),
-              label: const Text('Buka Pengaturan'),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                setState(() => _errorMessage = null);
-                _initializeCamera();
-              },
-              child: const Text('Coba Lagi'),
-            ),
-          ],
+        title: Text(
+          widget.isCheckOut ? 'Check-Out' : 'Check-In',
+          style: const TextStyle(color: Colors.white),
         ),
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
+      body: _error != null
+          ? _errorView()
+          : !_isInit
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : _buildCameraView(theme),
     );
   }
 
-  Widget _buildCameraView() {
+  Widget _errorView() => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.error_outline,
+                    size: 64, color: Colors.red.shade700),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () => openAppSettings(),
+                icon: const Icon(Icons.settings),
+                label: const Text('Buka Pengaturan'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                ),
+              )
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildCameraView(ThemeData theme) {
+    final controller = _cameraService.controller!;
     return Stack(
       children: [
-        // Camera preview
-        Positioned.fill(
-          child: CameraPreview(_cameraService.controller!),
-        ),
+        Positioned.fill(child: CameraPreview(controller)),
+        Positioned.fill(child: CustomPaint(painter: FaceGuidePainter())),
+        Positioned(top: 0, left: 0, right: 0, child: _statusBar(theme)),
+        Positioned(bottom: 40, left: 0, right: 0, child: _captureButton(theme)),
+        Positioned(bottom: 150, left: 16, right: 16, child: _tips(theme)),
+      ],
+    );
+  }
 
-        // Face guide overlay
-        Positioned.fill(
-          child: CustomPaint(
-            painter: FaceGuidePainter(),
+  Widget _statusBar(ThemeData theme) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.7),
+              Colors.black.withValues(alpha: 0.3),
+              Colors.transparent,
+            ],
           ),
         ),
+        child: Column(
+          children: [
+            if (_isProcessing)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Memproses...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Text(
+                _status,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black45,
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
 
-        // Status bar
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
+  Widget _captureButton(ThemeData theme) => Center(
+        child: GestureDetector(
+          onTap: _isProcessing ? null : _capture,
           child: Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.black54,
-            child: Column(
-              children: [
-                Text(
-                  _statusMessage,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Pastikan wajah Anda berada di dalam lingkaran',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _isProcessing ? Colors.grey.shade400 : Colors.white,
+              border: Border.all(
+                color: _isProcessing ? Colors.grey : theme.primaryColor,
+                width: 4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
               ],
             ),
+            child: _isProcessing
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                    ),
+                  )
+                : Icon(Icons.camera_alt, size: 35, color: theme.primaryColor),
           ),
         ),
+      );
 
-        // Capture button
-        Positioned(
-          bottom: 40,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: GestureDetector(
-              onTap: _captureAndVerify,
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _isProcessing ? Colors.grey : Colors.white,
-                  border: Border.all(color: Colors.white, width: 4),
-                ),
-                child: _isProcessing
-                    ? const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(strokeWidth: 3),
-                      )
-                    : const Icon(Icons.camera, size: 35),
-              ),
-            ),
+  Widget _tips(ThemeData theme) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
           ),
         ),
-
-        // Tips
-        Positioned(
-          bottom: 140,
-          left: 16,
-          right: 16,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
+                Icon(
+                  Icons.info_outline,
+                  color: theme.primaryColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Text(
                   'Tips:',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '• Pastikan pencahayaan cukup\n'
-                  '• Lihat langsung ke kamera\n'
-                  '• Jangan gunakan masker/kacamata hitam',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            const Text(
+              '• Pastikan pencahayaan cukup\n'
+              '• Lihat langsung ke kamera\n'
+              '• Jangan gunakan masker/kacamata hitam',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      );
 }
 
-// Face guide painter
 class FaceGuidePainter extends CustomPainter {
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas canvas, Size s) {
     final paint = Paint()
-      ..color = Colors.white
+      ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-
-    final center = Offset(size.width / 2, size.height / 2 - 50);
-    final radius = size.width * 0.35;
-
-    // Draw oval guide
-    final rect = Rect.fromCenter(
-      center: center,
-      width: radius * 2,
-      height: radius * 2.3,
-    );
-
-    canvas.drawOval(rect, paint);
-
-    // Draw corner guides
-    final cornerPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
-
-    const cornerLength = 30.0;
-
-    // Top-left
-    canvas.drawLine(
-      Offset(rect.left, rect.top),
-      Offset(rect.left + cornerLength, rect.top),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(rect.left, rect.top),
-      Offset(rect.left, rect.top + cornerLength),
-      cornerPaint,
-    );
-
-    // Top-right
-    canvas.drawLine(
-      Offset(rect.right, rect.top),
-      Offset(rect.right - cornerLength, rect.top),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(rect.right, rect.top),
-      Offset(rect.right, rect.top + cornerLength),
-      cornerPaint,
-    );
-
-    // Bottom-left
-    canvas.drawLine(
-      Offset(rect.left, rect.bottom),
-      Offset(rect.left + cornerLength, rect.bottom),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(rect.left, rect.bottom),
-      Offset(rect.left, rect.bottom - cornerLength),
-      cornerPaint,
-    );
-
-    // Bottom-right
-    canvas.drawLine(
-      Offset(rect.right, rect.bottom),
-      Offset(rect.right - cornerLength, rect.bottom),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(rect.right, rect.bottom),
-      Offset(rect.right, rect.bottom - cornerLength),
-      cornerPaint,
+    final center = Offset(s.width / 2, s.height / 2 - 40);
+    final radius = s.width * 0.34;
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: radius * 2, height: radius * 2.2),
+      paint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_) => false;
 }

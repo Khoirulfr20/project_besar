@@ -6,3 +6,4 @@ opencv-python
 mysql-connector-python
 python-multipart
 python-dotenv
+imutils

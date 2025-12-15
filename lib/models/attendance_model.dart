@@ -54,31 +54,52 @@ class Attendance {
 
   factory Attendance.fromJson(Map<String, dynamic> json) {
     return Attendance(
-      id: json['id'],
-      userId: json['user_id'],
-      scheduleId: json['schedule_id'],
+      id: json['id'] is String ? int.parse(json['id']) : json['id'],
+      userId: json['user_id'] is String
+          ? int.parse(json['user_id'])
+          : json['user_id'],
+      scheduleId: json['schedule_id'] != null
+          ? (json['schedule_id'] is String
+              ? int.parse(json['schedule_id'])
+              : json['schedule_id'])
+          : null,
       date: DateTime.parse(json['date']),
       checkInTime: json['check_in_time'],
       checkInPhoto: json['check_in_photo'],
-      checkInConfidence: json['check_in_confidence']?.toDouble(),
+      checkInConfidence: json['check_in_confidence'] != null
+          ? (json['check_in_confidence'] is String
+              ? double.parse(json['check_in_confidence'])
+              : json['check_in_confidence'].toDouble())
+          : null,
       checkInLocation: json['check_in_location'],
       checkInDevice: json['check_in_device'],
       checkOutTime: json['check_out_time'],
       checkOutPhoto: json['check_out_photo'],
-      checkOutConfidence: json['check_out_confidence']?.toDouble(),
+      checkOutConfidence: json['check_out_confidence'] != null
+          ? (json['check_out_confidence'] is String
+              ? double.parse(json['check_out_confidence'])
+              : json['check_out_confidence'].toDouble())
+          : null,
       checkOutLocation: json['check_out_location'],
       checkOutDevice: json['check_out_device'],
       status: json['status'],
-      workDuration: json['work_duration'],
+      workDuration: json['work_duration'] != null
+          ? (json['work_duration'] is String
+              ? int.parse(json['work_duration'])
+              : json['work_duration'])
+          : null,
       notes: json['notes'],
-      approvedBy: json['approved_by'],
+      approvedBy: json['approved_by'] != null
+          ? (json['approved_by'] is String
+              ? int.parse(json['approved_by'])
+              : json['approved_by'])
+          : null,
       approvedAt: json['approved_at'] != null
           ? DateTime.parse(json['approved_at'])
           : null,
       user: json['user'] != null ? User.fromJson(json['user']) : null,
-      schedule: json['schedule'] != null
-          ? Schedule.fromJson(json['schedule'])
-          : null,
+      schedule:
+          json['schedule'] != null ? Schedule.fromJson(json['schedule']) : null,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );

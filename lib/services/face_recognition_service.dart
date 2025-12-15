@@ -216,4 +216,6 @@ class FaceRecognitionService {
   void dispose() {
     _faceDetector.close();
   }
+
+  Future fileToBytes(String imagePath) async {}
 }

@@ -98,8 +98,4 @@ class AuthService {
     await prefs.remove('user');
   }
 
-  // Refresh token
-  Future<bool> refreshToken() async {
-    return await _api.refreshToken();
-  }
 }

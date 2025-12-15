@@ -19,20 +19,23 @@ class _PimpinanDashboardState extends State<PimpinanDashboard> {
   int _selectedIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
+void initState() {
+  super.initState();
 
-  Future<void> _loadData() async {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadData();
+  });
+}
+
+    Future<void> _loadData() async {
     final attendanceProvider =
         Provider.of<AttendanceProvider>(context, listen: false);
     final scheduleProvider =
         Provider.of<ScheduleProvider>(context, listen: false);
 
     await Future.wait([
-      attendanceProvider.getTodayAttendance(),
-      attendanceProvider.loadStatistics(),
+      attendanceProvider.getTodayAttendance(),         // ✅ Fixed
+      attendanceProvider.loadStatistics(),             // ✅ Fixed
       scheduleProvider.getMySchedules(),
     ]);
   }

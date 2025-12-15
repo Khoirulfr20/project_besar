@@ -37,7 +37,7 @@
         <!-- Record Attendance Dropdown -->
         <li class="nav-item mb-1">
             <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#recordMenu">
-                <i class="fas fa-user-check me-2"></i> Record Attendance
+                <i class="fas fa-user-check me-2"></i> Rekam Kehadiran
                 <i class="fas fa-angle-down ms-auto"></i>
             </a>
             <div class="collapse" id="recordMenu">
@@ -45,13 +45,13 @@
                     <li>
                         <a class="nav-link {{ request()->routeIs('admin.attendance.record') ? 'active' : '' }}"
                         href="{{ route('admin.attendance.record') }}">
-                            <i class="fas fa-pen me-2"></i> Manual Record
+                            <i class="fas fa-pen me-2"></i> Rekam Manual 
                         </a>
                     </li>
                     <li>
                         <a class="nav-link {{ request()->routeIs('admin.attendance.face.record') ? 'active' : '' }}"
                         href="{{ route('admin.attendance.face.record') }}">
-                            <i class="fas fa-camera me-2"></i> Face Record
+                            <i class="fas fa-camera me-2"></i> Rekam Wajah
                         </a>
                     </li>
                 </ul>

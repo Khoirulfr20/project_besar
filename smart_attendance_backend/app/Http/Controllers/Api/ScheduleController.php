@@ -232,4 +232,29 @@ class ScheduleController extends Controller
             'data' => $schedules
         ]);
     }
+    public function todayActiveSchedules(Request $request)  // ✅ Ganti nama ini (dari todayActive)
+    {
+        $user = $request->user();
+        $today = now()->format('Y-m-d');
+
+        // Base query jadwal hari ini & aktif
+        $query = Schedule::whereDate('date', $today)
+            ->where('is_active', true);
+
+        // Jika user anggota → hanya jadwal yang dia ikuti
+        if ($user->role == 'anggota') {
+            $query->whereHas('participants', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $schedules = $query->orderBy('start_time')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jadwal aktif hari ini berhasil diambil',
+            'data' => $schedules,
+        ]);
+    }
+
 }
