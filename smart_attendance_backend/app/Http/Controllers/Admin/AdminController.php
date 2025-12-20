@@ -54,24 +54,40 @@ class AdminController extends Controller
     /**
      * USERS MANAGEMENT
      */
-    public function usersIndex() { $users = User::all(); return view('admin.users.index', compact('users')); }
+    public function usersIndex() 
+    { 
+        $users = User::all(); 
+        return view('admin.users.index', compact('users')); 
+    }
 
-    public function usersCreate() { return view('admin.users.create'); }
+    public function usersCreate() 
+    { 
+        return view('admin.users.create'); 
+    }
 
-    public function usersEdit($id) { $user = User::findOrFail($id); return view('admin.users.edit', compact('user')); }
+    public function usersEdit($id) 
+    { 
+        $user = User::findOrFail($id); 
+        return view('admin.users.edit', compact('user')); 
+    }
 
     public function usersStore(Request $request)
     {
         $request->validate([
             'employee_id' => 'required|unique:users',
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
+            'password' => 'required|min:6|confirmed',
             'role' => 'required|in:admin,pimpinan,anggota',
+            'position' => 'nullable|string|max:255',
+            'department' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $data = $request->except('photo');
+        $data = $request->except('photo', 'password_confirmation');
         $data['password'] = Hash::make($request->password);
+        $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('users', 'public');
@@ -86,21 +102,41 @@ class AdminController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
+            'employee_id' => 'required|unique:users,employee_id,' . $user->id,
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'role' => 'required|string',
-            'status' => 'nullable|boolean',
-            'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'required|in:admin,pimpinan,anggota',
+            'position' => 'nullable|string|max:255',
+            'department' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'password' => 'nullable|min:6|confirmed',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $data = [
+            'employee_id' => $request->employee_id,
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'position' => $request->position,
+            'department' => $request->department,
+            'phone' => $request->phone,
+            'is_active' => $request->has('is_active') ? 1 : 0,
         ];
 
-        if ($request->has('status')) $data['is_active'] = $request->boolean('status');
-        if ($request->filled('password')) $data['password'] = Hash::make($request->password);
+        // Update password jika diisi
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        // Update foto jika ada upload baru
+        if ($request->hasFile('photo')) {
+            // Hapus foto lama jika ada
+            if ($user->photo && Storage::disk('public')->exists($user->photo)) {
+                Storage::disk('public')->delete($user->photo);
+            }
+            $data['photo'] = $request->file('photo')->store('users', 'public');
+        }
 
         $user->update($data);
 
@@ -110,8 +146,14 @@ class AdminController extends Controller
     public function usersDestroy($id)
     {
         $user = User::findOrFail($id);
-        if ($user->photo) Storage::disk('public')->delete($user->photo);
+        
+        // Hapus foto jika ada
+        if ($user->photo && Storage::disk('public')->exists($user->photo)) {
+            Storage::disk('public')->delete($user->photo);
+        }
+        
         $user->delete();
+        
         return redirect()->route('admin.users.index')->with('success', 'User berhasil dihapus');
     }
 
@@ -132,18 +174,27 @@ class AdminController extends Controller
 
     public function schedulesEdit($id)
     {
-        $schedule = Schedule::findOrFail($id);
-        return view('admin.schedules.edit', compact('schedule'));
+        $schedule = Schedule::with('participants')->findOrFail($id);
+        $users = User::where('is_active', true)->orderBy('name')->get();
+        
+        return view('admin.schedules.edit', compact('schedule', 'users'));
     }
 
     public function schedulesStore(Request $request)
     {
         $request->validate([
-            'title' => 'required',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'date' => 'required|date',
             'start_time' => 'required',
-            'end_time' => 'required',
-            'type' => 'required',
+            'end_time' => 'required|after:start_time',
+            'location' => 'nullable|string|max:255',
+            'type' => 'required|in:meeting,training,event,other',
+            'participant_ids' => 'required|array|min:3', // 🔥 MINIMAL 3 PESERTA
+            'participant_ids.*' => 'exists:users,id',
+        ], [
+            'participant_ids.required' => 'Peserta wajib dipilih.',
+            'participant_ids.min' => 'Minimal 3 peserta harus dipilih.',
         ]);
 
         $schedule = Schedule::create([
@@ -158,44 +209,52 @@ class AdminController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        if ($request->participant_ids) $schedule->participants()->attach($request->participant_ids);
+        // Attach peserta
+        $schedule->participants()->attach($request->participant_ids);
 
-        return redirect()->route('admin.schedules.index')->with('success', 'Jadwal berhasil ditambahkan');
+        return redirect()->route('admin.schedules.index')
+            ->with('success', 'Jadwal berhasil ditambahkan');
     }
 
     public function schedulesUpdate(Request $request, $id)
-{
-    $request->validate([
-        'title'       => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'date'        => 'required|date',
-        'start_time'  => 'required',
-        'end_time'    => 'required|after:start_time',
-        'location'    => 'required|string|max:255',
-        'type'        => 'required|in:meeting,training,event,other',
-        'status'      => 'required|in:scheduled,ongoing,completed,cancelled',
-    ]);
+    {
+        $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'date'        => 'required|date',
+            'start_time'  => 'required',
+            'end_time'    => 'required|after:start_time',
+            'location'    => 'nullable|string|max:255',
+            'type'        => 'required|in:meeting,training,event,other',
+            'status'      => 'required|in:scheduled,ongoing,completed,cancelled',
+            'participant_ids' => 'required|array|min:3', // 🔥 MINIMAL 3 PESERTA
+            'participant_ids.*' => 'exists:users,id',
+        ], [
+            'participant_ids.required' => 'Peserta wajib dipilih.',
+            'participant_ids.min' => 'Minimal 3 peserta harus dipilih.',
+        ]);
 
-    $schedule = \App\Models\Schedule::findOrFail($id);
+        $schedule = Schedule::findOrFail($id);
 
-    $schedule->update([
-        'title'       => $request->title,
-        'description' => $request->description,
-        'date'        => $request->date,
-        'start_time'  => $request->start_time,
-        'end_time'    => $request->end_time,
-        'location'    => $request->location,
-        'type'        => $request->type,
-        'status'      => $request->status,
-        // kalau kamu punya kolom is_active dan mau diubah via form,
-        // tambahkan input di Blade dan aktifkan baris ini:
-        // 'is_active'   => $request->boolean('is_active'),
-    ]);
+        // Update data jadwal
+        $schedule->update([
+            'title'       => $request->title,
+            'description' => $request->description,
+            'date'        => $request->date,
+            'start_time'  => $request->start_time,
+            'end_time'    => $request->end_time,
+            'location'    => $request->location,
+            'type'        => $request->type,
+            'status'      => $request->status,
+        ]);
 
-    return redirect()
-        ->route('admin.schedules.index')
-        ->with('success', 'Jadwal berhasil diperbarui');
-}
+        // 🔥 SYNC PESERTA (hapus yang lama, tambah yang baru)
+        $schedule->participants()->sync($request->participant_ids);
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'Jadwal berhasil diperbarui');
+    }
 
 
     public function schedulesDestroy($id)

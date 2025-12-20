@@ -32,13 +32,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.primaryColor,
-        title: const Text('Histori Kehadiran', style: TextStyle(color: Colors.white)),
+        title: const Text('Histori Kehadiran',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -68,12 +69,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [theme.primaryColor.withValues(alpha: 0.1), theme.primaryColor.withValues(alpha: 0.05)],
+                colors: [
+                  theme.primaryColor.withValues(alpha: 0.1),
+                  theme.primaryColor.withValues(alpha: 0.05)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.primaryColor.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: theme.primaryColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -83,7 +88,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     color: theme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.date_range, color: theme.primaryColor, size: 24),
+                  child: Icon(Icons.date_range,
+                      color: theme.primaryColor, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -109,7 +115,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey[400]),
               ],
             ),
           ),
@@ -158,15 +165,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard('Hadir', present, Icons.check_circle, Colors.green),
+                  child: _buildStatCard(
+                      'Hadir', present, Icons.check_circle, Colors.green),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildStatCard('Terlambat', late, Icons.access_time, Colors.orange),
+                  child: _buildStatCard(
+                      'Terlambat', late, Icons.access_time, Colors.orange),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _buildStatCard('Alfa', absent, Icons.cancel, Colors.red),
+                  child:
+                      _buildStatCard('Alfa', absent, Icons.cancel, Colors.red),
                 ),
               ],
             ),
@@ -271,7 +281,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildAttendanceCard(Attendance attendance, ThemeData theme) {
     final statusColor = _getStatusColor(attendance.status);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -325,7 +335,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            DateFormat('dd MMMM yyyy', 'id_ID').format(attendance.date),
+                            DateFormat('dd MMMM yyyy', 'id_ID')
+                                .format(attendance.date),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -366,32 +377,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ],
                 ),
-                if (attendance.workDuration != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.timer, size: 16, color: Colors.blue),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Durasi Kerja: ${attendance.workDurationFormatted}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -503,7 +488,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _showAttendanceDetail(Attendance attendance, ThemeData theme) {
     final statusColor = _getStatusColor(attendance.status);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -569,7 +554,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  DateFormat('EEEE', 'id_ID').format(attendance.date),
+                                  DateFormat('EEEE', 'id_ID')
+                                      .format(attendance.date),
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.9),
                                     fontSize: 12,
@@ -578,7 +564,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  DateFormat('dd MMMM yyyy', 'id_ID').format(attendance.date),
+                                  DateFormat('dd MMMM yyyy', 'id_ID')
+                                      .format(attendance.date),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -592,7 +579,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -649,16 +637,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ],
                       ),
-                      if (attendance.workDuration != null) ...[
-                        const SizedBox(height: 12),
-                        _buildDetailCard(
-                          icon: Icons.timer,
-                          title: 'Durasi Kerja',
-                          value: attendance.workDurationFormatted,
-                          color: Colors.blue,
-                        ),
-                      ],
-
                       // Confidence Scores
                       if (attendance.checkInConfidence != null ||
                           attendance.checkOutConfidence != null) ...[
@@ -775,7 +753,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildConfidenceCard(String label, double confidence, Color color) {
     final percentage = (confidence * 100).toStringAsFixed(1);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -825,7 +803,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _showFilterDialog() async {
     final theme = Theme.of(context);
-    
+
     final result = await showDialog<Map<String, DateTime>>(
       context: context,
       builder: (context) => _FilterDialog(

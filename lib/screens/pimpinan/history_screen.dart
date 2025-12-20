@@ -376,33 +376,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ],
                 ),
-                if (attendance.workDuration != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.timer, size: 16, color: Colors.blue),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Durasi Kerja: ${attendance.workDurationFormatted}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -663,16 +636,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         ],
                       ),
-                      if (attendance.workDuration != null) ...[
-                        const SizedBox(height: 12),
-                        _buildDetailCard(
-                          icon: Icons.timer,
-                          title: 'Durasi Kerja',
-                          value: attendance.workDurationFormatted,
-                          color: Colors.blue,
-                        ),
-                      ],
-
                       // Confidence Scores
                       if (attendance.checkInConfidence != null ||
                           attendance.checkOutConfidence != null) ...[

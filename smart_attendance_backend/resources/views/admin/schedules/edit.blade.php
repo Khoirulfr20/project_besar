@@ -37,11 +37,12 @@
 
             {{-- JUDUL --}}
             <div class="mb-3">
-                <label class="form-label fw-medium">Judul *</label>
+                <label class="form-label fw-medium">Judul Kegiatan *</label>
                 <input type="text" 
                        name="title" 
-                       class="form-control form-control-modern" 
+                       class="form-control form-control-modern @error('title') is-invalid @enderror" 
                        value="{{ old('title', $schedule->title) }}" required>
+                @error('title') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
             {{-- DESKRIPSI --}}
@@ -57,26 +58,29 @@
                     <label class="form-label fw-medium">Tanggal *</label>
                     <input type="date" 
                            name="date" 
-                           class="form-control form-control-modern"
-                           value="{{ old('date', $schedule->date) }}" required>
+                           class="form-control form-control-modern @error('date') is-invalid @enderror"
+                           value="{{ old('date', $schedule->date->format('Y-m-d')) }}" required>
+                    @error('date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Waktu Mulai *</label>
+                    <label class="form-label fw-medium">Jam Mulai *</label>
                     <input type="time" 
                            name="start_time"
                            id="start_time"
-                           class="form-control form-control-modern"
+                           class="form-control form-control-modern @error('start_time') is-invalid @enderror"
                            value="{{ old('start_time', $schedule->start_time) }}" required>
+                    @error('start_time') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Waktu Selesai *</label>
+                    <label class="form-label fw-medium">Jam Selesai *</label>
                     <input type="time" 
                            name="end_time"
                            id="end_time"
-                           class="form-control form-control-modern"
+                           class="form-control form-control-modern @error('end_time') is-invalid @enderror"
                            value="{{ old('end_time', $schedule->end_time) }}" required>
+                    @error('end_time') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
             </div>
@@ -84,33 +88,57 @@
             {{-- LOKASI & TIPE --}}
             <div class="row g-3 mt-1">
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Lokasi *</label>
+                    <label class="form-label fw-medium">Lokasi</label>
                     <input type="text" name="location" 
                            class="form-control form-control-modern"
-                           value="{{ old('location', $schedule->location) }}" required>
+                           value="{{ old('location', $schedule->location) }}">
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Tipe *</label>
+                    <label class="form-label fw-medium">Tipe Kegiatan *</label>
                     <select name="type" 
-                            class="form-select form-select-modern"
+                            class="form-select form-select-modern @error('type') is-invalid @enderror"
                             required>
+                        <option value="">Pilih Tipe</option>
                         <option value="meeting"  {{ old('type', $schedule->type) == 'meeting' ? 'selected' : '' }}>Meeting</option>
                         <option value="training" {{ old('type', $schedule->type) == 'training' ? 'selected' : '' }}>Training</option>
                         <option value="event"    {{ old('type', $schedule->type) == 'event'    ? 'selected' : '' }}>Event</option>
                         <option value="other"    {{ old('type', $schedule->type) == 'other'    ? 'selected' : '' }}>Lainnya</option>
                     </select>
+                    @error('type') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
+            </div>
+
+            {{-- PESERTA --}}
+            <div class="mb-3 mt-3">
+                <label class="form-label fw-medium">Peserta * <span class="badge bg-danger">Min 3 orang</span></label>
+                <select name="participant_ids[]" 
+                        id="participantsSelectEdit"
+                        class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"
+                        multiple size="8" required>
+                    @foreach($users as $user)
+                        <option value="{{ $user->id }}"
+                            {{ in_array($user->id, old('participant_ids', $schedule->participants->pluck('id')->toArray())) ? 'selected' : '' }}>
+                            {{ $user->name }} ({{ $user->employee_id }})
+                        </option>
+                    @endforeach
+                </select>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> Tahan Ctrl untuk memilih/menghapus. <strong>Minimal 3 peserta wajib dipilih.</strong>
+                </small>
+                @error('participant_ids')
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                @enderror
             </div>
 
             {{-- STATUS --}}
             <div class="mt-3 mb-2">
                 <label class="form-label fw-medium">Status *</label>
                 <select name="status" class="form-select form-select-modern" required>
-                    <option value="scheduled" {{ $schedule->status == 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
-                    <option value="ongoing"   {{ $schedule->status == 'ongoing'   ? 'selected' : '' }}>Berlangsung</option>
-                    <option value="completed" {{ $schedule->status == 'completed' ? 'selected' : '' }}>Selesai</option>
-                    <option value="cancelled" {{ $schedule->status == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                    <option value="scheduled" {{ old('status', $schedule->status) == 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
+                    <option value="ongoing"   {{ old('status', $schedule->status) == 'ongoing'   ? 'selected' : '' }}>Berlangsung</option>
+                    <option value="completed" {{ old('status', $schedule->status) == 'completed' ? 'selected' : '' }}>Selesai</option>
+                    <option value="cancelled" {{ old('status', $schedule->status) == 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
                 </select>
             </div>
 
@@ -120,7 +148,7 @@
                 <button type="button" 
                         class="btn btn-light border rounded-3"
                         onclick="confirmBack(event)">
-                    <i class="fas fa-arrow-left me-1"></i> Kembali
+                    <i class="fas fa-times me-1"></i> Batal
                 </button>
 
                 <button type="button" 
@@ -171,11 +199,26 @@ function validateTime() {
 // KONFIRMASI UPDATE
 // =============================================
 function confirmSubmit() {
+    // Validasi jam terlebih dahulu
     if (!validateTime()) return;
 
+    // 🔥 CEK JUMLAH PESERTA SAAT KLIK UPDATE
+    const selectedParticipants = document.querySelectorAll('#participantsSelectEdit option:checked').length;
+    
+    if (selectedParticipants < 3) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Peserta Kurang',
+            text: 'Minimal 3 peserta harus dipilih untuk melanjutkan!',
+            confirmButtonColor: '#d33',
+        });
+        return false;
+    }
+
+    // Jika validasi lolos, tampilkan konfirmasi
     Swal.fire({
         title: "Update Jadwal?",
-        text: "Pastikan semua data sudah benar.",
+        html: `Pastikan semua data sudah benar.<br><small class="text-muted">Peserta terpilih: <strong>${selectedParticipants} orang</strong></small>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Ya, Update",
@@ -196,7 +239,7 @@ function confirmSubmit() {
 }
 
 // =============================================
-// LOADING POPUP
+// POPUP LOADING
 // =============================================
 function loadingPopup() {
     Swal.fire({
@@ -239,8 +282,8 @@ function confirmBack(event) {
     event.preventDefault();
 
     Swal.fire({
-        title: "Kembali?",
-        text: "Perubahan yang belum disimpan akan hilang.",
+        title: "Batalkan perubahan?",
+        text: "Data yang belum disimpan akan hilang.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Ya, Kembali",
@@ -277,6 +320,10 @@ function confirmBack(event) {
 
 .card {
     border-radius: 14px;
+}
+
+label.form-label {
+    color: #444;
 }
 </style>
 

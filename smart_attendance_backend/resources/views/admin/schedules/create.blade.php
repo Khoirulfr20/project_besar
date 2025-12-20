@@ -94,17 +94,23 @@
 
             {{-- PESERTA --}}
             <div class="mb-3 mt-3">
-                <label class="form-label fw-medium">Peserta</label>
+                <label class="form-label fw-medium">Peserta * <span class="badge bg-danger">Min 3 orang</span></label>
                 <select name="participant_ids[]" 
-                        class="form-select form-select-modern"
-                        multiple size="8">
+                        id="participantsSelectCreate"
+                        class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"
+                        multiple size="8" required>
                     @foreach($users as $user)
-                        <option value="{{ $user->id }}">
+                        <option value="{{ $user->id }}" {{ in_array($user->id, old('participant_ids', [])) ? 'selected' : '' }}>
                             {{ $user->name }} ({{ $user->employee_id }})
                         </option>
                     @endforeach
                 </select>
-                <small class="text-muted">Tahan Ctrl untuk memilih lebih dari satu.</small>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> Tahan Ctrl untuk memilih lebih dari satu. <strong>Minimal 3 peserta wajib dipilih.</strong>
+                </small>
+                @error('participant_ids')
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                @enderror
             </div>
 
             {{-- BUTTON GROUP --}}
@@ -130,7 +136,6 @@
 @endsection
 
 @push('scripts')
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
@@ -141,7 +146,7 @@ function validateTime() {
     let start = document.querySelector('input[name="start_time"]').value;
     let end   = document.querySelector('input[name="end_time"]').value;
 
-    if (start && end && end < start) {
+    if (start && end && end <= start) {
         Swal.fire({
             icon: 'error',
             title: 'Jam tidak valid',
@@ -157,12 +162,26 @@ function validateTime() {
 // KONFIRMASI SIMPAN
 // =============================================
 function confirmSubmit() {
-
+    // Validasi jam terlebih dahulu
     if (!validateTime()) return;
 
+    // 🔥 CEK JUMLAH PESERTA SAAT KLIK SIMPAN
+    const selectedParticipants = document.querySelectorAll('#participantsSelectCreate option:checked').length;
+    
+    if (selectedParticipants < 3) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Peserta Kurang',
+            text: 'Minimal 3 peserta harus dipilih untuk melanjutkan!',
+            confirmButtonColor: '#d33',
+        });
+        return false;
+    }
+
+    // Jika validasi lolos, tampilkan konfirmasi
     Swal.fire({
         title: 'Simpan Jadwal?',
-        text: 'Pastikan semua data sudah benar.',
+        html: `Pastikan semua data sudah benar.<br><small class="text-muted">Peserta terpilih: <strong>${selectedParticipants} orang</strong></small>`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Simpan',

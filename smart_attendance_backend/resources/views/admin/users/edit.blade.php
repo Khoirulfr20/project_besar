@@ -63,11 +63,31 @@
                     <input type="password" name="password"
                            class="form-control @error('password') is-invalid @enderror"
                            placeholder="Kosongkan jika tidak ingin mengubah">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Minimal 6 karakter. Kosongkan jika tidak ingin mengubah.
+                    </small>
                     @error('password')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
+            </div>
+
+            {{-- === Row 2.5 - PASSWORD CONFIRMATION (YANG HILANG) === --}}
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <!-- Spacer untuk alignment -->
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-medium">Konfirmasi Password</label>
+                    <input type="password" name="password_confirmation"
+                           class="form-control"
+                           placeholder="Ulangi password baru">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Harus sama dengan password di atas.
+                    </small>
+                </div>
             </div>
 
             {{-- === Row 3 === --}}
@@ -78,9 +98,9 @@
                     <select name="role" required
                             class="form-select @error('role') is-invalid @enderror">
                         <option value="">Pilih Role</option>
-                        <option value="admin"    {{ old('role',    $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
-                        <option value="pimpinan" {{ old('role',    $user->role) == 'pimpinan' ? 'selected' : '' }}>Pimpinan</option>
-                        <option value="anggota"  {{ old('role',    $user->role) == 'anggota' ? 'selected' : '' }}>Anggota</option>
+                        <option value="admin"    {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
+                        <option value="pimpinan" {{ old('role', $user->role) == 'pimpinan' ? 'selected' : '' }}>Pimpinan</option>
+                        <option value="anggota"  {{ old('role', $user->role) == 'anggota' ? 'selected' : '' }}>Anggota</option>
                     </select>
                     @error('role')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -117,13 +137,17 @@
                         <div class="mb-2">
                             <img src="{{ Storage::url($user->photo) }}"
                                  class="rounded shadow-sm"
-                                 style="height: 90px; width: 90px; object-fit: cover;">
+                                 style="height: 90px; width: 90px; object-fit: cover;"
+                                 alt="Foto {{ $user->name }}">
                         </div>
                     @endif
 
                     <input type="file" name="photo"
                            accept="image/*"
                            class="form-control @error('photo') is-invalid @enderror">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Format: JPG, PNG. Maksimal 2MB.
+                    </small>
 
                     @error('photo')
                         <div class="invalid-feedback">{{ $message }}</div>

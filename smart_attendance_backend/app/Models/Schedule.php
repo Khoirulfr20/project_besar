@@ -93,6 +93,58 @@ class Schedule extends Model
         });
     }
 
+    // ============================================
+    // ACCESSORS - AUTO UPDATE STATUS
+    // ============================================
+    
+    /**
+     * Get auto-calculated status based on current time
+     */
+    public function getAutoStatusAttribute()
+    {
+        // Jika status adalah 'cancelled', tetap cancelled
+        if ($this->status === 'cancelled') {
+            return 'cancelled';
+        }
+
+        $now = Carbon::now();
+        $scheduleDate = Carbon::parse($this->date);
+        $startDateTime = $scheduleDate->copy()->setTimeFromTimeString($this->start_time);
+        $endDateTime = $scheduleDate->copy()->setTimeFromTimeString($this->end_time);
+
+        // Jika sudah melewati waktu selesai
+        if ($now->greaterThan($endDateTime)) {
+            return 'completed';
+        }
+
+        // Jika sedang berlangsung (antara start dan end time)
+        if ($now->between($startDateTime, $endDateTime)) {
+            return 'ongoing';
+        }
+
+        // Jika belum dimulai
+        if ($now->lessThan($startDateTime)) {
+            return 'scheduled';
+        }
+
+        return 'scheduled';
+    }
+
+    /**
+     * Get status badge HTML
+     */
+    public function getStatusBadgeAttribute()
+    {
+        $badges = [
+            'scheduled' => '<span class="badge bg-primary">Terjadwal</span>',
+            'ongoing' => '<span class="badge bg-success">Berlangsung</span>',
+            'completed' => '<span class="badge bg-secondary">Selesai</span>',
+            'cancelled' => '<span class="badge bg-danger">Dibatalkan</span>',
+        ];
+
+        return $badges[$this->auto_status] ?? '<span class="badge bg-secondary">-</span>';
+    }
+
     // Helper Methods
     public function isOngoing()
     {

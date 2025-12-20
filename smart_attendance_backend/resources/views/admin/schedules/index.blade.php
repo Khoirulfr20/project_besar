@@ -39,16 +39,17 @@
                     {{-- Judul + Show Detail --}}
                     <td class="fw-semibold">
                         <a href="#" class="text-primary text-decoration-none"
-                           onclick="showDetail(
-                               '{{ $schedule->title }}',
-                               '{{ $schedule->date->format('d/m/Y') }}',
-                               '{{ $schedule->start_time }} - {{ $schedule->end_time }}',
-                               '{{ $schedule->location ?? '-' }}',
-                               '{{ ucfirst($schedule->type) }}',
-                               '{{ $schedule->participants->count() }} orang',
-                               '{{ $schedule->status }}'
-                           )">
-                           {{ $schedule->title }}
+                        onclick="showDetail(
+                            '{{ $schedule->title }}',
+                            '{{ $schedule->description ?? '-' }}',
+                            '{{ $schedule->date->format('d/m/Y') }}',
+                            '{{ $schedule->start_time }} - {{ $schedule->end_time }}',
+                            '{{ $schedule->location ?? '-' }}',
+                            '{{ ucfirst($schedule->type) }}',
+                            '{{ $schedule->participants->count() }} orang',
+                            '{{ $schedule->auto_status }}'
+                        )">
+                        {{ $schedule->title }}
                         </a>
                     </td>
 
@@ -65,7 +66,11 @@
 
                     {{-- Status --}}
                     <td>
-                        @switch($schedule->status)
+                        @php
+                            $autoStatus = $schedule->auto_status;
+                        @endphp
+                        
+                        @switch($autoStatus)
                             @case('scheduled')  <span class="badge bg-primary">Terjadwal</span> @break
                             @case('ongoing')    <span class="badge bg-success">Berlangsung</span> @break
                             @case('completed')  <span class="badge bg-secondary">Selesai</span> @break
@@ -105,9 +110,10 @@
 
 <script>
 // ======================
+// ======================
 // DETAIL POPUP
 // ======================
-function showDetail(title, date, time, location, type, participants, status) {
+function showDetail(title, description, date, time, location, type, participants, status) {
 
     const badge = {
         scheduled : '<span class="badge bg-primary">Terjadwal</span>',
@@ -120,6 +126,8 @@ function showDetail(title, date, time, location, type, participants, status) {
         title: `<strong>${title}</strong>`,
         html: `
             <div class="text-start small pt-2">
+                <p><strong>Deskripsi:</strong> ${description}</p>
+                <hr class="my-2">
                 <p><strong>Tanggal:</strong> ${date}</p>
                 <p><strong>Waktu:</strong> ${time}</p>
                 <p><strong>Lokasi:</strong> ${location}</p>
@@ -129,7 +137,7 @@ function showDetail(title, date, time, location, type, participants, status) {
             </div>
         `,
         icon: "info",
-        width: "32rem",
+        width: "36rem",
         confirmButtonText: "Tutup",
         confirmButtonColor: "#667eea",
     });
