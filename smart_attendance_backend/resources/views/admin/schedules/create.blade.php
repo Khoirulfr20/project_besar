@@ -71,9 +71,15 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-medium">Lokasi</label>
-                    <input type="text" name="location" 
-                           class="form-control form-control-modern"
-                           value="{{ old('location') }}">
+                    <select name="location" 
+                            id="locationSelect"
+                            class="form-select form-select-modern @error('location') is-invalid @enderror">
+                        <option value="">Pilih Lokasi</option>
+                        <option value="Gedung Serba Guna" {{ old('location') == 'Gedung Serba Guna' ? 'selected' : '' }}>Gedung Serba Guna</option>
+                        <option value="Masjid" {{ old('location') == 'Masjid' ? 'selected' : '' }}>Masjid</option>
+                        <option value="Kantor PC" {{ old('location') == 'Kantor PC' ? 'selected' : '' }}>Kantor PC</option>
+                    </select>
+                    @error('location') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
                 <div class="col-md-6">
@@ -98,7 +104,7 @@
                 <select name="participant_ids[]" 
                         id="participantsSelectCreate"
                         class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"
-                        multiple size="8" required>
+                        multiple required>
                     @foreach($users as $user)
                         <option value="{{ $user->id }}" {{ in_array($user->id, old('participant_ids', [])) ? 'selected' : '' }}>
                             {{ $user->name }} ({{ $user->employee_id }})
@@ -106,7 +112,7 @@
                     @endforeach
                 </select>
                 <small class="text-muted">
-                    <i class="fas fa-info-circle"></i> Tahan Ctrl untuk memilih lebih dari satu. <strong>Minimal 3 peserta wajib dipilih.</strong>
+                    <i class="fas fa-info-circle"></i> Gunakan kolom pencarian untuk menemukan peserta dengan cepat. <strong>Minimal 3 peserta wajib dipilih.</strong>
                 </small>
                 @error('participant_ids')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -137,8 +143,57 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{-- Select2 CDN --}}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+// =============================================
+// INISIALISASI SELECT2
+// =============================================
+$(document).ready(function() {
+    // Lokasi Select dengan fitur pencarian
+    $('#locationSelect').select2({
+        placeholder: 'Ketik untuk mencari lokasi...',
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function() {
+                return "Lokasi tidak ditemukan";
+            }
+        }
+    });
+
+    // Peserta Select (Multiple) dengan fitur pencarian
+    $('#participantsSelectCreate').select2({
+        placeholder: 'Cari dan pilih peserta (min. 3 orang)...',
+        allowClear: true,
+        width: '100%',
+        closeOnSelect: false,
+        language: {
+            noResults: function() {
+                return "Peserta tidak ditemukan";
+            }
+        }
+    });
+
+    // Custom styling untuk Select2 agar sesuai dengan form-control-modern
+    $('.select2-container--default .select2-selection--single').css({
+        'border-radius': '10px',
+        'border': '1px solid #d6d8e1',
+        'padding': '6px 12px',
+        'height': 'auto',
+        'min-height': '43px'
+    });
+
+    $('.select2-container--default .select2-selection--multiple').css({
+        'border-radius': '10px',
+        'border': '1px solid #d6d8e1',
+        'padding': '4px 8px',
+        'min-height': '43px'
+    });
+});
+
 // =============================================
 // CEK VALIDASI JAM
 // =============================================
@@ -166,7 +221,7 @@ function confirmSubmit() {
     if (!validateTime()) return;
 
     // 🔥 CEK JUMLAH PESERTA SAAT KLIK SIMPAN
-    const selectedParticipants = document.querySelectorAll('#participantsSelectCreate option:checked').length;
+    const selectedParticipants = $('#participantsSelectCreate').val() ? $('#participantsSelectCreate').val().length : 0;
     
     if (selectedParticipants < 3) {
         Swal.fire({
@@ -266,6 +321,39 @@ function confirmBack(event) {
 
 label.form-label {
     color: #444;
+}
+
+/* Custom Select2 Styling agar sesuai dengan form-control-modern */
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default .select2-selection--multiple:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 0.15rem rgba(102,126,234,0.25);
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 0.15rem rgba(102,126,234,0.25) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #667eea !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #667eea !important;
+    border: none !important;
+    border-radius: 6px !important;
+    color: white !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: white !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #d6d8e1 !important;
+    border-radius: 10px !important;
 }
 </style>
 

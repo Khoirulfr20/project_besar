@@ -79,10 +79,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/face/register', [AdminAttendanceFaceController::class, 'faceRegister'])
                 ->name('face.register');
 
+            // ✅ TAMBAHKAN INI - Route baru untuk check status
+            Route::post('/face/check-status', [AdminAttendanceFaceController::class, 'checkAttendanceStatus'])
+                ->name('face.checkStatus');
+
             // (kalau kamu masih pakai)
             Route::post('/bulk-import', [AdminController::class, 'bulkImportAttendance'])->name('bulkImport');
-        });
 
+        });
+        
         // ==================== REPORTS ====================
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('/attendance', [AdminController::class, 'attendanceReport'])->name('attendance');

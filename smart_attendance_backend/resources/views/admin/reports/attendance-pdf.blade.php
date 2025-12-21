@@ -46,10 +46,10 @@
             @foreach($attendances as $index => $attendance)
             <tr>
                 <td>{{ $index + 1 }}</td>
-                <td>{{ $attendance->date }}</td>
+                <td>{{ \Carbon\Carbon::parse($attendance->date)->format('d-m-Y') }}</td>
                 <td>{{ $attendance->user->name ?? '-' }}</td>
-                <td>{{ $attendance->check_in ?? '-' }}</td>
-                <td>{{ $attendance->check_out ?? '-' }}</td>
+                <td>{{ $attendance->check_in_time ?? '-' }}</td>
+                <td>{{ $attendance->check_out_time ?? '-' }}</td>
                 <td>{{ $attendance->status ?? '-' }}</td>
             </tr>
             @endforeach

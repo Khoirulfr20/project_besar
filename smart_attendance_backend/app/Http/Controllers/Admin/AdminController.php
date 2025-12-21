@@ -180,6 +180,9 @@ class AdminController extends Controller
         return view('admin.schedules.edit', compact('schedule', 'users'));
     }
 
+    // ============================================
+    // ✅ FIXED: schedulesStore() dengan Validasi Ketat
+    // ============================================
     public function schedulesStore(Request $request)
     {
         $request->validate([
@@ -188,13 +191,23 @@ class AdminController extends Controller
             'date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
-            'location' => 'nullable|string|max:255',
+            
+            // ✅ VALIDASI LOKASI: Hanya terima nilai yang diizinkan
+            'location' => [
+                'nullable',
+                'string',
+                'in:Gedung Serba Guna,Masjid,Kantor PC' // ⚠️ WHITELIST lokasi
+            ],
+            
             'type' => 'required|in:meeting,training,event,other',
-            'participant_ids' => 'required|array|min:3', // 🔥 MINIMAL 3 PESERTA
+            'participant_ids' => 'required|array|min:3',
             'participant_ids.*' => 'exists:users,id',
         ], [
             'participant_ids.required' => 'Peserta wajib dipilih.',
             'participant_ids.min' => 'Minimal 3 peserta harus dipilih.',
+            
+            // ✅ Custom error message untuk lokasi
+            'location.in' => 'Lokasi tidak valid. Pilih dari: Gedung Serba Guna, Masjid, atau Kantor PC.',
         ]);
 
         $schedule = Schedule::create([
@@ -209,13 +222,15 @@ class AdminController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        // Attach peserta
         $schedule->participants()->attach($request->participant_ids);
 
         return redirect()->route('admin.schedules.index')
             ->with('success', 'Jadwal berhasil ditambahkan');
     }
 
+    // ============================================
+    // ✅ FIXED: schedulesUpdate() dengan Validasi Ketat
+    // ============================================
     public function schedulesUpdate(Request $request, $id)
     {
         $request->validate([
@@ -224,19 +239,28 @@ class AdminController extends Controller
             'date'        => 'required|date',
             'start_time'  => 'required',
             'end_time'    => 'required|after:start_time',
-            'location'    => 'nullable|string|max:255',
+            
+            // ✅ VALIDASI LOKASI: Hanya terima nilai yang diizinkan
+            'location' => [
+                'nullable',
+                'string',
+                'in:Gedung Serba Guna,Masjid,Kantor PC' // ⚠️ WHITELIST lokasi
+            ],
+            
             'type'        => 'required|in:meeting,training,event,other',
             'status'      => 'required|in:scheduled,ongoing,completed,cancelled',
-            'participant_ids' => 'required|array|min:3', // 🔥 MINIMAL 3 PESERTA
+            'participant_ids' => 'required|array|min:3',
             'participant_ids.*' => 'exists:users,id',
         ], [
             'participant_ids.required' => 'Peserta wajib dipilih.',
             'participant_ids.min' => 'Minimal 3 peserta harus dipilih.',
+            
+            // ✅ Custom error message untuk lokasi
+            'location.in' => 'Lokasi tidak valid. Pilih dari: Gedung Serba Guna, Masjid, atau Kantor PC.',
         ]);
 
         $schedule = Schedule::findOrFail($id);
 
-        // Update data jadwal
         $schedule->update([
             'title'       => $request->title,
             'description' => $request->description,
@@ -248,7 +272,6 @@ class AdminController extends Controller
             'status'      => $request->status,
         ]);
 
-        // 🔥 SYNC PESERTA (hapus yang lama, tambah yang baru)
         $schedule->participants()->sync($request->participant_ids);
 
         return redirect()

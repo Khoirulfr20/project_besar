@@ -15,10 +15,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
 
- @override
+  @override
   void initState() {
     super.initState();
-    
+
     // ✅ FIX: Gunakan Future.microtask untuk delay eksekusi
     Future.microtask(() => _loadHistory());
   }
@@ -117,8 +117,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey[400]),
               ],
             ),
           ),

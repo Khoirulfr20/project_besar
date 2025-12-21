@@ -320,29 +320,6 @@ function showStatDetail(statType) {
 }
 
 
-/* -------------------------------
-   SHOW SCHEDULE DETAIL
---------------------------------*/
-function showScheduleDetail(id) {
-    Swal.fire({
-        title: "Detail Jadwal",
-        html: `<div class='py-4'><div class="spinner-border"></div></div>`,
-        showConfirmButton: false
-    });
-}
-
-
-/* -------------------------------
-   SHOW ATTENDANCE DETAIL
---------------------------------*/
-function showAttendanceDetail(id) {
-    Swal.fire({
-        title: "Detail Kehadiran",
-        html: `<div class='py-4'><div class="spinner-border"></div></div>`,
-        showConfirmButton: false
-    });
-}
-
 
 /* -------------------------------
    NAVIGATION SHORTCUTS
