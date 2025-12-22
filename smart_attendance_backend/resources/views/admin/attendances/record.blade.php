@@ -70,7 +70,7 @@
                     <div class="row g-3">
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">User *</label>
+                            <label class="form-label fw-medium">User</label>
                             <select class="form-select rounded-3" id="userId" name="user_id" required>
                                 <option value="">Pilih User</option>
                                 @foreach($users as $user)
@@ -82,13 +82,13 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Tanggal *</label>
+                            <label class="form-label fw-medium">Tanggal</label>
                             <input type="date" class="form-control rounded-3" id="date" name="date"
                                    value="{{ date('Y-m-d') }}" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Tipe Absen *</label>
+                            <label class="form-label fw-medium">Tipe Absen</label>
                             <select class="form-select rounded-3" id="attendanceType" name="type" required>
                                 <option value="check_in">Check-In</option>
                                 <option value="check_out">Check-Out</option>
@@ -96,13 +96,13 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Waktu *</label>
+                            <label class="form-label fw-medium">Waktu</label>
                             <input type="time" class="form-control rounded-3" id="time" name="time"
                                    value="{{ date('H:i') }}" required>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Status *</label>
+                            <label class="form-label fw-medium">Status</label>
                             <select class="form-select rounded-3" id="status" name="status" required>
                                 <option value="present">Hadir</option>
                                 <option value="late">Terlambat</option>
@@ -113,7 +113,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-medium">Jadwal (Opsional)</label>
+                            <label class="form-label fw-medium">Jadwal</label>
                             <select class="form-select rounded-3" id="scheduleId" name="schedule_id">
                                 <option value="">Tidak Ada Jadwal</option>
                                 @foreach($schedules as $schedule)
@@ -124,20 +124,12 @@
 
                         {{-- REASON MANUAL BACKUP --}}
                         <div class="col-md-12">
-                            <label class="form-label fw-medium">Alasan Input Manual *</label>
+                            <label class="form-label fw-medium">Alasan Input Manual</label>
                             <select class="form-select rounded-3" id="manual_reason" name="manual_reason" required>
                                 <option value="">Pilih Alasan</option>
                                 <option value="face_not_detected">Wajah tidak terdeteksi</option>
                                 <option value="camera_problem">Kamera bermasalah</option>
-                                <option value="guest_or_non_registered">Tamu / Non-Anggota</option>
-                                <option value="network_issue">Jaringan/Server bermasalah</option>
-                                <option value="urgent_manual_override">Override darurat oleh admin</option>
                             </select>
-                        </div>
-
-                        <div class="col-md-12">
-                            <label class="form-label fw-medium">Catatan (Opsional)</label>
-                            <textarea class="form-control rounded-3" id="notes" name="notes" rows="3"></textarea>
                         </div>
 
                     </div>

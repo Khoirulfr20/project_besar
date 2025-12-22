@@ -11,8 +11,8 @@ class ApiService {
   late Dio _externalDio; // ✅ Untuk Python API
 
   // ✅ FIX: Base URL harus jelas
-  static const String laravelBaseUrl = 'http://192.168.202.100:8000/api';
-  static const String pythonBaseUrl = 'http://192.168.202.100:8001';
+  static const String laravelBaseUrl = 'http://192.168.202.209:8000/api';
+  static const String pythonBaseUrl = 'http://192.168.202.209:8001';
 
   void initialize() {
     // Dio untuk Laravel API

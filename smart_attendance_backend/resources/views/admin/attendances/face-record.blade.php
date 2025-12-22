@@ -98,7 +98,7 @@
 
                         {{-- Pilih Jadwal --}}
                         <div class="mb-3">
-                            <label class="form-label fw-medium">Pilih Jadwal Hari Ini *</label>
+                            <label class="form-label fw-medium">Pilih Jadwal Hari Ini</label>
                             <select class="form-select rounded-3" id="attendanceSchedule">
                                 <option value="">-- Pilih Jadwal --</option>
                                 @foreach($todaySchedules as $sc)
@@ -186,7 +186,7 @@
 
                     <form id="faceRegisterForm" onsubmit="submitRegister(event)">
                         <div class="mb-3">
-                            <label class="form-label fw-medium">Pilih User *</label>
+                            <label class="form-label fw-medium">Pilih User</label>
                             <select class="form-select rounded-3" id="registerUserIdForm" required>
                                 <option value="">Pilih User</option>
                                 @foreach($users as $user)
