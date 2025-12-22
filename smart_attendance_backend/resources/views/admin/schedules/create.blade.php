@@ -23,7 +23,7 @@
 
             {{-- JUDUL --}}
             <div class="mb-3">
-                <label class="form-label fw-medium">Judul Kegiatan *</label>
+                <label class="form-label fw-medium">Judul Kegiatan</label>
                 <input type="text" 
                        name="title" 
                        class="form-control form-control-modern @error('title') is-invalid @enderror"
@@ -41,7 +41,7 @@
             <div class="row g-3">
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Tanggal *</label>
+                    <label class="form-label fw-medium">Tanggal</label>
                     <input type="date" name="date"
                            class="form-control form-control-modern @error('date') is-invalid @enderror"
                            value="{{ old('date') }}" required>
@@ -49,7 +49,7 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Jam Mulai *</label>
+                    <label class="form-label fw-medium">Jam Mulai</label>
                     <input type="time" name="start_time"
                            class="form-control form-control-modern @error('start_time') is-invalid @enderror"
                            value="{{ old('start_time') }}" required>
@@ -57,7 +57,7 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Jam Selesai *</label>
+                    <label class="form-label fw-medium">Jam Selesai</label>
                     <input type="time" name="end_time"
                            class="form-control form-control-modern @error('end_time') is-invalid @enderror"
                            value="{{ old('end_time') }}" required>
@@ -83,7 +83,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Tipe Kegiatan *</label>
+                    <label class="form-label fw-medium">Tipe Kegiatan</label>
                     <select name="type" 
                             class="form-select form-select-modern @error('type') is-invalid @enderror"
                             required>
@@ -100,7 +100,7 @@
 
             {{-- PESERTA --}}
             <div class="mb-3 mt-3">
-                <label class="form-label fw-medium">Peserta * <span class="badge bg-danger">Min 3 orang</span></label>
+                <label class="form-label fw-medium">Peserta<span class="badge bg-danger">Min 3 orang</span></label>
                 <select name="participant_ids[]" 
                         id="participantsSelectCreate"
                         class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"

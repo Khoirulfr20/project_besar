@@ -94,10 +94,6 @@
                                 <strong>ID Pegawai</strong>
                                 <span id="recognizedEmployee"></span>
                             </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <strong>Tingkat Confidence</strong>
-                                <span id="recognizedConfidence"></span>
-                            </li>
                         </ul>
 
                         {{-- Pilih Jadwal --}}
@@ -344,7 +340,6 @@ async function sendToRecognition() {
     document.getElementById("resultBox").style.display = "block";
     document.getElementById("recognizedName").innerHTML = recognized.name;
     document.getElementById("recognizedEmployee").innerHTML = recognized.employee_id;
-    document.getElementById("recognizedConfidence").innerHTML = (recognized.confidence * 100).toFixed(2) + "%";
     
     // Auto-detect status jika jadwal sudah dipilih
     const scheduleId = document.getElementById("attendanceSchedule").value;

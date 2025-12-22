@@ -37,7 +37,7 @@
 
             {{-- JUDUL --}}
             <div class="mb-3">
-                <label class="form-label fw-medium">Judul Kegiatan *</label>
+                <label class="form-label fw-medium">Judul Kegiatan</label>
                 <input type="text" 
                        name="title" 
                        class="form-control form-control-modern @error('title') is-invalid @enderror" 
@@ -55,7 +55,7 @@
             <div class="row g-3">
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Tanggal *</label>
+                    <label class="form-label fw-medium">Tanggal</label>
                     <input type="date" 
                            name="date" 
                            class="form-control form-control-modern @error('date') is-invalid @enderror"
@@ -64,7 +64,7 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Jam Mulai *</label>
+                    <label class="form-label fw-medium">Jam Mulai</label>
                     <input type="time" 
                            name="start_time"
                            id="start_time"
@@ -74,7 +74,7 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Jam Selesai *</label>
+                    <label class="form-label fw-medium">Jam Selesai</label>
                     <input type="time" 
                            name="end_time"
                            id="end_time"
@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Tipe Kegiatan *</label>
+                    <label class="form-label fw-medium">Tipe Kegiatan</label>
                     <select name="type" 
                             class="form-select form-select-modern @error('type') is-invalid @enderror"
                             required>
@@ -117,7 +117,7 @@
 
             {{-- PESERTA --}}
             <div class="mb-3 mt-3">
-                <label class="form-label fw-medium">Peserta * <span class="badge bg-danger">Min 3 orang</span></label>
+                <label class="form-label fw-medium">Peserta<span class="badge bg-danger">Min 3 orang</span></label>
                 <select name="participant_ids[]" 
                         id="participantsSelectEdit"
                         class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"
@@ -139,7 +139,7 @@
 
             {{-- STATUS --}}
             <div class="mt-3 mb-2">
-                <label class="form-label fw-medium">Status *</label>
+                <label class="form-label fw-medium">Status</label>
                 <select name="status" class="form-select form-select-modern" required>
                     <option value="scheduled" {{ old('status', $schedule->status) == 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
                     <option value="ongoing"   {{ old('status', $schedule->status) == 'ongoing'   ? 'selected' : '' }}>Berlangsung</option>

@@ -11,8 +11,8 @@ class ApiService {
   late Dio _externalDio; // ✅ Untuk Python API
 
   // ✅ FIX: Base URL harus jelas
-  static const String laravelBaseUrl = 'http://10.32.249.186:8000/api';
-  static const String pythonBaseUrl = 'http://10.32.249.186:8001';
+  static const String laravelBaseUrl = 'http://192.168.202.100:8000/api';
+  static const String pythonBaseUrl = 'http://192.168.202.100:8001';
 
   void initialize() {
     // Dio untuk Laravel API
@@ -49,14 +49,14 @@ class ApiService {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          
+
           // ✅ Log request
           AppLogger.debug('=== REQUEST ===');
           AppLogger.debug('URL: ${options.baseUrl}${options.path}');
           AppLogger.debug('Method: ${options.method}');
           AppLogger.debug('Headers: ${options.headers}');
           AppLogger.debug('Data: ${options.data}');
-          
+
           return handler.next(options);
         },
         onResponse: (response, handler) {
@@ -64,7 +64,7 @@ class ApiService {
           AppLogger.debug('=== RESPONSE ===');
           AppLogger.debug('Status: ${response.statusCode}');
           AppLogger.debug('Data: ${response.data}');
-          
+
           return handler.next(response);
         },
         onError: (error, handler) async {
@@ -74,7 +74,7 @@ class ApiService {
           AppLogger.error('Status: ${error.response?.statusCode}');
           AppLogger.error('Message: ${error.message}');
           AppLogger.error('Data: ${error.response?.data}');
-          
+
           if (error.response?.statusCode == 401) {
             await removeToken();
           }
@@ -160,13 +160,13 @@ class ApiService {
       AppLogger.debug('=== EXTERNAL REQUEST ===');
       AppLogger.debug('URL: $url');
       AppLogger.debug('Data: $data');
-      
+
       final response = await _externalDio.post(url, data: data);
-      
+
       AppLogger.debug('=== EXTERNAL RESPONSE ===');
       AppLogger.debug('Status: ${response.statusCode}');
       AppLogger.debug('Data: ${response.data}');
-      
+
       return response;
     } catch (e) {
       AppLogger.error('External API error: $e');
@@ -205,7 +205,8 @@ class ApiService {
           return 'Koneksi timeout. Cek koneksi internet Anda.';
         case DioExceptionType.badResponse:
           final message = error.response?.data['message'];
-          return message ?? 'Terjadi kesalahan pada server (${error.response?.statusCode})';
+          return message ??
+              'Terjadi kesalahan pada server (${error.response?.statusCode})';
         case DioExceptionType.cancel:
           return 'Request dibatalkan';
         case DioExceptionType.connectionError:

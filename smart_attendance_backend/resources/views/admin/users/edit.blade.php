@@ -24,7 +24,7 @@
             <div class="row g-3">
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">ID Karyawan *</label>
+                    <label class="form-label fw-medium">ID Karyawan</label>
                     <input type="text" name="employee_id"
                            class="form-control @error('employee_id') is-invalid @enderror"
                            value="{{ old('employee_id', $user->employee_id) }}" required>
@@ -34,7 +34,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Nama Lengkap *</label>
+                    <label class="form-label fw-medium">Nama Lengkap</label>
                     <input type="text" name="name"
                            class="form-control @error('name') is-invalid @enderror"
                            value="{{ old('name', $user->name) }}" required>
@@ -49,7 +49,7 @@
             <div class="row g-3 mt-1">
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium">Email *</label>
+                    <label class="form-label fw-medium">Email</label>
                     <input type="email" name="email"
                            class="form-control @error('email') is-invalid @enderror"
                            value="{{ old('email', $user->email) }}" required>
@@ -94,7 +94,7 @@
             <div class="row g-3 mt-1">
 
                 <div class="col-md-4">
-                    <label class="form-label fw-medium">Role *</label>
+                    <label class="form-label fw-medium">Role</label>
                     <select name="role" required
                             class="form-select @error('role') is-invalid @enderror">
                         <option value="">Pilih Role</option>
