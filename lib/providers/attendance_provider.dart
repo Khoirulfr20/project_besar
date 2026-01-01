@@ -15,18 +15,24 @@ class AttendanceProvider with ChangeNotifier {
   Map<String, dynamic>? get statistics => _statistics;
   bool get isLoading => _isLoading;
 
-  /// ✅ Check-in
+  /// ✅ Check-in dengan GPS
   Future<Map<String, dynamic>> checkIn({
     required String photoPath,
     int? scheduleId,
+    double? latitude,   // ✅ GPS BARU
+    double? longitude,  // ✅ GPS BARU
   }) async {
     debugPrint('🔵 CHECK-IN: Starting...');
     debugPrint('📸 Photo path: $photoPath');
     debugPrint('📅 Schedule ID: $scheduleId');
+    debugPrint('📍 Latitude: $latitude');
+    debugPrint('📍 Longitude: $longitude');
 
     final result = await _attendanceService.checkIn(
       photoPath: photoPath,
       scheduleId: scheduleId,
+      latitude: latitude,   // ✅ KIRIM GPS
+      longitude: longitude, // ✅ KIRIM GPS
     );
 
     debugPrint('✅ CHECK-IN Result: $result');
@@ -39,15 +45,21 @@ class AttendanceProvider with ChangeNotifier {
     return result;
   }
 
-  /// ✅ Check-out
+  /// ✅ Check-out dengan GPS
   Future<Map<String, dynamic>> checkOut({
     required String photoPath,
+    double? latitude,   // ✅ GPS BARU
+    double? longitude,  // ✅ GPS BARU
   }) async {
     debugPrint('🔵 CHECK-OUT: Starting...');
     debugPrint('📸 Photo path: $photoPath');
+    debugPrint('📍 Latitude: $latitude');
+    debugPrint('📍 Longitude: $longitude');
 
     final result = await _attendanceService.checkOut(
       photoPath: photoPath,
+      latitude: latitude,   // ✅ KIRIM GPS
+      longitude: longitude, // ✅ KIRIM GPS
     );
 
     debugPrint('✅ CHECK-OUT Result: $result');
@@ -63,7 +75,7 @@ class AttendanceProvider with ChangeNotifier {
   /// ✅ Get Today's Attendance
   Future<void> getTodayAttendance() async {
     try {
-      debugPrint('🔍 Loading today attendance...');
+      debugPrint('📅 Loading today attendance...');
       _todayAttendance = await _attendanceService.getTodayAttendance();
       debugPrint('✅ Today attendance loaded: ${_todayAttendance?.id}');
       notifyListeners();
@@ -78,7 +90,7 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('🔍 Loading my attendance...');
+      debugPrint('📋 Loading my attendance...');
       debugPrint('📅 Date range: $startDate to $endDate');
 
       _attendances = await _attendanceService.getMyAttendance(
@@ -101,7 +113,7 @@ class AttendanceProvider with ChangeNotifier {
   /// ✅ Load Statistics
   Future<void> loadStatistics({String? startDate, String? endDate}) async {
     try {
-      debugPrint('🔍 Loading statistics...');
+      debugPrint('📊 Loading statistics...');
       _statistics = await _attendanceService.getStatistics(
         startDate: startDate,
         endDate: endDate,

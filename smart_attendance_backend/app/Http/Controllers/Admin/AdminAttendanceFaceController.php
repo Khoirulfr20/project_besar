@@ -226,46 +226,101 @@ class AdminAttendanceFaceController extends Controller
             'photo'   => 'required|file|image',
         ]);
 
-        $file = $request->file('photo');
-        $binary = file_get_contents($file->getRealPath());
+        try {
+            // ✅ CEK JUMLAH SAMPLE YANG SUDAH ADA
+            $existingCount = FaceData::where('user_id', $request->user_id)->count();
+            
+            if ($existingCount >= 5) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Maksimal 5 sample wajah per user. Silakan hapus sample lama terlebih dahulu.',
+                ], 400);
+            }
 
-        $response = Http::timeout(10)
-            ->attach('image', $binary, 'photo.jpg')
-            ->post(config('services.face_api.url') . '/encode');
+            $file = $request->file('photo');
+            $binary = file_get_contents($file->getRealPath());
 
-        if (! $response->ok()) {
+            $response = Http::timeout(15)
+                ->attach('image', $binary, 'photo.jpg')
+                ->post(env('PYTHON_FACE_API_URL') . '/encode');
+
+            \Log::info('Python /encode response:', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Face API error: ' . $response->body(),
+                ], 500);
+            }
+
+            $body = $response->json();
+
+            if (!isset($body['success']) || !$body['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $body['message'] ?? 'Encoding gagal.',
+                ], 400);
+            }
+
+            if (!isset($body['data']['embedding'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Embedding tidak ditemukan.',
+                ], 500);
+            }
+
+            $embedding = $body['data']['embedding'];
+            $quality = $body['data']['quality_score'] ?? 1.0;
+            $method = $body['data']['method'] ?? 'LBPH'; // ✅ TAMBAHAN
+            $path = $file->store('face_photos', 'public');
+
+            // Sample number
+            $sampleNumber = $existingCount + 1;
+            $isPrimary = ($sampleNumber === 1);
+
+            // ✅ FIXED: Validasi ukuran embedding LBPH (200x200 = 40,000 elements)
+            $expectedSize = 40000; // 200 * 200 pixels
+            if (count($embedding) !== $expectedSize) {
+                \Log::warning('Embedding size mismatch', [
+                    'expected' => $expectedSize,
+                    'actual' => count($embedding)
+                ]);
+            }
+
+            // Create new record
+            FaceData::create([
+                'user_id' => $request->user_id,
+                'face_encoding' => json_encode($embedding),
+                'face_photo' => $path,
+                'face_sample_number' => $sampleNumber,
+                'face_registered_at' => now(),
+                'quality_score' => $quality,
+                'is_primary' => $isPrimary,
+                'is_active' => true,
+                'registration_source' => 'admin_panel',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Sample wajah ke-{$sampleNumber} berhasil ditambahkan menggunakan {$method}! ({$sampleNumber}/5)",
+                'data' => [
+                    'sample_number' => $sampleNumber,
+                    'method' => $method,
+                    'embedding_size' => count($embedding),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Face API tidak dapat diakses.',
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
-
-        $body = $response->json();
-        if (!($body['success'] ?? false)) {
-            return response()->json(['success' => false, 'message' => $body['message'] ?? 'Encoding gagal.']);
-        }
-
-        $embedding = $body['embedding'];
-        $quality   = $body['quality_score'];
-
-        // simpan foto fisik untuk bukti
-        $path = $file->store('face_photos', 'public');
-
-        FaceData::updateOrCreate(
-            ['user_id' => $request->user_id, 'is_primary' => true],
-            [
-                'face_encoding'      => json_encode($embedding),
-                'face_photo'         => $path,
-                'face_registered_at' => now(),
-                'quality_score'      => $quality,
-                'is_active'          => true,
-                'registration_source'=> 'admin_panel',
-            ]
-        );
-
-        return response()->json(['success' => true, 'message' => 'Wajah berhasil diregistrasi!']);
     }
-
 
     public function register(Request $request)
     {
@@ -275,62 +330,75 @@ class AdminAttendanceFaceController extends Controller
         ]);
 
         try {
-            /** =====================================================
-             * 1) Decode Base64 & Simpan FOTO ke Storage
-             * ===================================================== */
-            $img = $request->photo; // Base64
-            $img = str_replace('data:image/jpeg;base64,', '', $img);
-            $img = str_replace('data:image/png;base64,', '', $img);
+            // Decode Base64
+            $img = $request->photo;
+            $img = str_replace(['data:image/jpeg;base64,', 'data:image/png;base64,'], '', $img);
             $img = base64_decode($img);
 
-            // Simpan file fisik
             $fileName = 'face_' . time() . '_' . $request->user_id . '.jpg';
             $filePath = storage_path('app/public/face/' . $fileName);
+            
+            if (!file_exists(dirname($filePath))) {
+                mkdir(dirname($filePath), 0755, true);
+            }
+            
             file_put_contents($filePath, $img);
-
-            // URL file untuk DB
             $photoUrl = 'face/' . $fileName;
 
-            /** =====================================================
-             * 2) Kirim foto ke Python: /encode
-             * ===================================================== */
-            $pythonUrl = env('PYTHON_RECOG_URL') . '/encode'; // contoh: http://127.0.0.1:8001
+            // Kirim ke Python
+            $pythonUrl = env('PYTHON_FACE_API_URL') . '/encode';
+            
+            $response = Http::timeout(15)
+                ->attach('image', file_get_contents($filePath), $fileName)
+                ->post($pythonUrl);
 
-            $response = Http::timeout(10)->attach(
-                'image',
-                file_get_contents($filePath),
-                $fileName
-            )->post($pythonUrl);
+            \Log::info('Python response:', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
 
-            if (!$response->json('success')) {
+            if (!$response->successful()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $response->json('message') ?? 'Face encode gagal.',
-                ], 200);
+                    'message' => 'Python API error: ' . $response->body(),
+                ], 500);
             }
 
-            $embedding = $response->json('embedding');
-            $quality   = $response->json('quality_score');
+            $result = $response->json();
 
-            // Jika angka kualitas terlalu kecil, tolak dulu
+            if (!($result['success'] ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'] ?? 'Face encode gagal.',
+                ], 400);
+            }
+
+            // ✅ FIX: Ambil dari "data"
+            $embedding = $result['data']['embedding'] ?? null;
+            $quality = $result['data']['quality_score'] ?? 1.0;
+
+            if (!$embedding) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Embedding tidak ditemukan.',
+                ], 500);
+            }
+
             if ($quality < 0.25) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Kualitas wajah terlalu rendah! Coba ambil ulang.',
-                ], 200);
+                ], 400);
             }
 
-            /** =====================================================
-             * 3) Simpan ke DB face_data
-             * ===================================================== */
             FaceData::create([
-                'user_id'             => $request->user_id,
-                'face_encoding'       => json_encode($embedding),
-                'face_photo'          => $photoUrl,
-                'registration_photo'  => $request->photo,
-                'face_registered_at'  => now(),
-                'quality_score'       => $quality,
-                'is_primary'          => true,
+                'user_id' => $request->user_id,
+                'face_encoding' => json_encode($embedding),
+                'face_photo' => $photoUrl,
+                'registration_photo' => $request->photo,
+                'face_registered_at' => now(),
+                'quality_score' => $quality,
+                'is_primary' => true,
                 'registration_source' => 'admin_panel'
             ]);
 
@@ -340,6 +408,7 @@ class AdminAttendanceFaceController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error('Error register: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -365,7 +434,7 @@ class AdminAttendanceFaceController extends Controller
         if (! $response->ok()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak dapat menghubungi Face API.'
+                'message' => 'Coba Periksa Face API.'
             ], 500);
         }
 
@@ -378,8 +447,11 @@ class AdminAttendanceFaceController extends Controller
             ]);
         }
 
-        $userId     = $body['data']['user_id'];
-        $confidence = $body['data']['confidence'];
+        // ✅ FIXED: Ambil data dari structure yang benar
+        $userId = $body['data']['user_id'];
+        $confidence = $body['data']['confidence']; // Percentage 0-100
+        $distance = $body['data']['distance']; // LBPH distance
+        $method = $body['data']['method'] ?? 'LBPH';
 
         $user = User::find($userId);
 
@@ -390,13 +462,19 @@ class AdminAttendanceFaceController extends Controller
             ]);
         }
 
+        // ✅ SUCCESS Response dengan informasi lengkap
         return response()->json([
             'success' => true,
             'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'employee_id' => $user->employee_id,
-                'confidence' => $confidence
+                'confidence' => $confidence, // Percentage
+                'distance' => $distance, // LBPH distance
+                'method' => $method, // Recognition method
+                
+                // ✅ Info tambahan untuk UI
+                'quality' => $distance <= 20 ? 'Excellent' : ($distance <= 30 ? 'Good' : 'Fair'),
             ]
         ]);
     }
@@ -621,4 +699,11 @@ class AdminAttendanceFaceController extends Controller
             'message' => 'Tipe absensi tidak valid.'
         ], 400);
     }
-}
+    
+    public function faceRegisterView()
+    {
+        $users = User::orderBy('name')->get();
+        
+        return view('admin.attendances.face-register', compact('users'));
+    }
+    }

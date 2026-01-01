@@ -1,7 +1,7 @@
 import os
 import io
 import json
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import datetime
 
 import numpy as np
@@ -28,12 +28,14 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "smart_attendance"),
 }
 
-FACE_DISTANCE_THRESHOLD = float(os.getenv("FACE_DISTANCE_THRESHOLD", "12.0"))
+# Threshold confidence LBPH (semakin rendah semakin baik, 0-100)
+# Nilai kecil = match yang baik, nilai besar = tidak match
+FACE_CONFIDENCE_THRESHOLD = float(os.getenv("FACE_DISTANCE_THRESHOLD", "45.0"))
 
 # ==========================
 # APP
 # ==========================
-app = FastAPI(title="SmartAttendance Face API")
+app = FastAPI(title="SmartAttendance Face API - LBPH")
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,14 +61,25 @@ def get_db():
         )
 
 # ==========================
-# FACE UTILS
+# FACE DETECTION & LBPH
 # ==========================
 CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-def extract_embedding(cv2_img):
-    """Extract face embedding from image"""
+# Initialize LBPH Face Recognizer
+LBPH_RECOGNIZER = cv2.face.LBPHFaceRecognizer_create(
+    radius=1,
+    neighbors=8,
+    grid_x=8,
+    grid_y=8
+)
+
+def detect_face(cv2_img) -> Optional[Tuple[np.ndarray, Tuple[int, int, int, int]]]:
+    """
+    Detect face in image and return face region + bounding box
+    Returns: (face_gray, (x, y, w, h)) or None
+    """
     try:
         gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
@@ -74,32 +87,106 @@ def extract_embedding(cv2_img):
         faces = CASCADE.detectMultiScale(
             gray,
             scaleFactor=1.1,
-            minNeighbors=3,
-            minSize=(80, 80)
+            minNeighbors=5,
+            minSize=(80, 80),
+            flags=cv2.CASCADE_SCALE_IMAGE
         )
 
         if len(faces) == 0:
             return None
 
+        # Get largest face
         x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
         face = gray[y:y+h, x:x+w]
+        
+        # Resize to standard size for consistency
+        face = cv2.resize(face, (200, 200))
 
-        face = cv2.resize(face, (64, 64))
-        face = face.astype("float32") / 255.0
-
-        return face.flatten().tolist()
+        return face, (x, y, w, h)
     
     except Exception as e:
-        print(f"❌ EXTRACT EMBEDDING ERROR: {e}")
+        print(f"❌ FACE DETECTION ERROR: {e}")
         return None
 
-def euclidean(a, b) -> float:
-    """Calculate euclidean distance between two vectors"""
-    return float(np.linalg.norm(np.array(a) - np.array(b)))
+def extract_embedding(cv2_img):
+    """
+    Extract face for LBPH training/recognition
+    Returns: normalized face image as list (for JSON storage)
+    """
+    result = detect_face(cv2_img)
+    if result is None:
+        return None
+    
+    face, _ = result
+    
+    # Convert to list for JSON storage
+    # Store as flattened normalized values
+    face_normalized = face.astype("float32") / 255.0
+    return face_normalized.flatten().tolist()
 
-def confidence(dist):
-    """Calculate confidence score from distance"""
-    return max(0.0, min(1.0, 1.0 - (dist / FACE_DISTANCE_THRESHOLD)))
+def prepare_face_for_lbph(embedding_list) -> np.ndarray:
+    """
+    Convert stored embedding back to image format for LBPH
+    """
+    face_array = np.array(embedding_list, dtype=np.float32)
+    face_array = (face_array * 255.0).astype(np.uint8)
+    face_img = face_array.reshape(200, 200)
+    return face_img
+
+def train_lbph_model(faces_data: List[dict]) -> Optional[cv2.face.LBPHFaceRecognizer]:
+    """
+    Train LBPH model with registered faces
+    faces_data: [{"user_id": int, "face_encoding": str}, ...]
+    Returns: trained recognizer or None
+    """
+    if len(faces_data) == 0:
+        return None
+    
+    try:
+        faces = []
+        labels = []
+        
+        for data in faces_data:
+            try:
+                embedding = json.loads(data["face_encoding"])
+                face_img = prepare_face_for_lbph(embedding)
+                faces.append(face_img)
+                labels.append(data["user_id"])
+            except (json.JSONDecodeError, ValueError) as e:
+                print(f"⚠️ Invalid encoding for user {data['user_id']}: {e}")
+                continue
+        
+        if len(faces) == 0:
+            return None
+        
+        # Train LBPH recognizer
+        recognizer = cv2.face.LBPHFaceRecognizer_create(
+            radius=1,
+            neighbors=8,
+            grid_x=8,
+            grid_y=8
+        )
+        recognizer.train(faces, np.array(labels))
+        
+        print(f"✅ LBPH model trained with {len(faces)} faces")
+        return recognizer
+        
+    except Exception as e:
+        print(f"❌ LBPH TRAINING ERROR: {e}")
+        return None
+
+def confidence_to_percentage(lbph_confidence: float) -> float:
+    """
+    Convert LBPH confidence (distance) to percentage
+    LBPH confidence: 0 = perfect match, higher = worse match
+    Output: 0-100 where 100 = perfect match
+    """
+    # Normalize: map [0, threshold] to [100, 0]
+    if lbph_confidence <= 0:
+        return 100.0
+    
+    percentage = max(0.0, 100.0 - (lbph_confidence / FACE_CONFIDENCE_THRESHOLD * 100.0))
+    return min(100.0, percentage)
 
 # ==========================
 # HEALTH CHECK
@@ -122,6 +209,7 @@ def health():
                 "success": True,
                 "status": "healthy",
                 "database": "connected",
+                "face_recognition": "LBPH",
                 "timestamp": datetime.now().isoformat()
             }
         )
@@ -172,7 +260,7 @@ async def encode(image: UploadFile = File(...)):
         img = Image.open(io.BytesIO(content)).convert("RGB")
         cv2_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-        # Extract embedding
+        # Extract face embedding
         embedding = extract_embedding(cv2_img)
         
         if embedding is None:
@@ -194,7 +282,8 @@ async def encode(image: UploadFile = File(...)):
                 "data": {
                     "embedding": embedding,
                     "quality_score": 1.0,
-                    "embedding_size": len(embedding)
+                    "embedding_size": len(embedding),
+                    "method": "LBPH"
                 }
             }
         )
@@ -216,7 +305,7 @@ async def encode(image: UploadFile = File(...)):
 # ==========================
 @app.post("/recognize")
 async def recognize(image: UploadFile = File(...)):
-    """Recognize face from uploaded image"""
+    """Recognize face from uploaded image using LBPH"""
     
     # Validate file type
     if not image.content_type.startswith("image/"):
@@ -246,10 +335,10 @@ async def recognize(image: UploadFile = File(...)):
         img = Image.open(io.BytesIO(content)).convert("RGB")
         cv2_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-        # Extract face embedding
-        probe = extract_embedding(cv2_img)
+        # Detect face
+        result = detect_face(cv2_img)
         
-        if probe is None:
+        if result is None:
             print("❌ GAGAL: Wajah tidak terdeteksi di gambar")
             return JSONResponse(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -260,6 +349,8 @@ async def recognize(image: UploadFile = File(...)):
                     "hint": "Pastikan wajah terlihat jelas dan pencahayaan cukup"
                 }
             )
+        
+        probe_face, _ = result
 
         # Get registered faces from database
         try:
@@ -299,27 +390,38 @@ async def recognize(image: UploadFile = File(...)):
                 }
             )
 
-        # Find best match
-        best_user = None
-        best_dist = None
+        # Train LBPH model with registered faces
+        recognizer = train_lbph_model(rows)
+        
+        if recognizer is None:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "success": False,
+                    "message": "Gagal melatih model pengenalan wajah",
+                    "error": "MODEL_TRAINING_FAILED"
+                }
+            )
 
-        for r in rows:
-            try:
-                vec = json.loads(r["face_encoding"])
-                d = euclidean(probe, vec)
-                print(f"   User {r['user_id']}: distance = {d:.2f}")
-                
-                if best_dist is None or d < best_dist:
-                    best_dist = d
-                    best_user = r["user_id"]
-            except json.JSONDecodeError as e:
-                print(f"⚠️ Invalid encoding for user {r['user_id']}: {e}")
-                continue
+        # Predict using LBPH
+        try:
+            label, confidence = recognizer.predict(probe_face)
+            print(f"🎯 LBPH Prediction: User {label}, confidence={confidence:.2f}, threshold={FACE_CONFIDENCE_THRESHOLD}")
+        except Exception as e:
+            print(f"❌ LBPH PREDICTION ERROR: {e}")
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "success": False,
+                    "message": "Gagal mengenali wajah",
+                    "error": "PREDICTION_ERROR",
+                    "details": str(e)
+                }
+            )
 
-        print(f"🎯 Best: User {best_user}, dist={best_dist:.2f}, threshold={FACE_DISTANCE_THRESHOLD}")
-
-        # Check if match is good enough
-        if best_dist is None or best_dist > FACE_DISTANCE_THRESHOLD:
+        # Check if confidence is good enough
+        # Lower confidence = better match in LBPH
+        if confidence > FACE_CONFIDENCE_THRESHOLD:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
                 content={
@@ -327,9 +429,9 @@ async def recognize(image: UploadFile = File(...)):
                     "message": "Wajah tidak dikenali",
                     "error": "FACE_NOT_RECOGNIZED",
                     "data": {
-                        "distance": round(best_dist, 2) if best_dist else None,
-                        "threshold": FACE_DISTANCE_THRESHOLD,
-                        "confidence": round(confidence(best_dist) * 100, 2) if best_dist else 0
+                        "distance": round(confidence, 2),
+                        "threshold": FACE_CONFIDENCE_THRESHOLD,
+                        "confidence": round(confidence_to_percentage(confidence), 2)
                     },
                     "hint": "Wajah tidak cocok dengan data yang terdaftar"
                 }
@@ -342,10 +444,11 @@ async def recognize(image: UploadFile = File(...)):
                 "success": True,
                 "message": "Wajah berhasil dikenali",
                 "data": {
-                    "user_id": best_user,
-                    "distance": round(best_dist, 2),
-                    "confidence": round(confidence(best_dist) * 100, 2),
-                    "threshold": FACE_DISTANCE_THRESHOLD
+                    "user_id": int(label),
+                    "distance": round(confidence, 2),
+                    "confidence": round(confidence_to_percentage(confidence), 2),
+                    "threshold": FACE_CONFIDENCE_THRESHOLD,
+                    "method": "LBPH"
                 }
             }
         )

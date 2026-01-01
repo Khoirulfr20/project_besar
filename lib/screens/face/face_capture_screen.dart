@@ -1,10 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../services/camera_service.dart';
+import '../../services/location_service.dart'; // ✅ IMPORT LOCATION SERVICE
 import '../../providers/attendance_provider.dart';
 import '../../providers/schedule_provider.dart';
 
@@ -18,12 +18,18 @@ class FaceCaptureScreen extends StatefulWidget {
 
 class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   final CameraService _cameraService = CameraService();
+  final LocationService _locationService = LocationService(); // ✅ INIT LOCATION SERVICE
 
   bool _isInit = false;
   bool _isProcessing = false;
   String _status = 'Posisikan wajah Anda di dalam lingkaran';
   String? _error;
   String? _capturedImagePath;
+  
+  // ✅ GPS Data
+  double? _latitude;
+  double? _longitude;
+  int? _distance;
 
   @override
   void initState() {
@@ -62,6 +68,46 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     super.dispose();
   }
 
+  /// ✅ AMBIL GPS KOORDINAT
+  Future<Map<String, dynamic>?> _getGpsLocation() async {
+    try {
+      debugPrint('📍 Getting GPS location...');
+
+      // Check & request location permission
+      final hasPermission = await _locationService.checkAndRequestLocationSettings(context);
+      if (!hasPermission) {
+        throw Exception('Izin lokasi atau GPS tidak aktif');
+      }
+
+      // Validate location (ambil koordinat & validasi jarak)
+      final validation = await _locationService.validateLocation();
+
+      debugPrint('✅ GPS Location obtained:');
+      debugPrint('   Latitude: ${validation['latitude']}');
+      debugPrint('   Longitude: ${validation['longitude']}');
+      debugPrint('   Distance: ${validation['distance']}m');
+      debugPrint('   Valid: ${validation['valid']}');
+
+      // Cek apakah dalam radius
+      if (!validation['valid']) {
+        final distance = _locationService.formatDistance(validation['distance'].toDouble());
+        final maxRadius = _locationService.formatDistance(validation['max_radius'].toDouble());
+        
+        throw Exception(
+          'Anda berada di luar area kantor!\n\n'
+          'Jarak Anda: $distance\n'
+          'Radius maksimal: $maxRadius\n\n'
+          'Absensi hanya dapat dilakukan di area kantor.'
+        );
+      }
+
+      return validation;
+    } catch (e) {
+      debugPrint('❌ GPS Error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> _capture() async {
     if (_isProcessing) return;
 
@@ -71,23 +117,40 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     });
 
     try {
+      // ✅ STEP 1: Ambil Foto
       final imagePath = await _cameraService.takePicture();
       if (imagePath == null) throw Exception('Gagal mengambil gambar');
 
-      // Simpan path gambar
       _capturedImagePath = imagePath;
+
+      setState(() {
+        _status = 'Foto berhasil! Mengambil lokasi GPS...';
+      });
+
+      // ✅ STEP 2: Ambil & Validasi GPS
+      final gpsData = await _getGpsLocation();
+
+      if (gpsData != null) {
+        _latitude = gpsData['latitude'];
+        _longitude = gpsData['longitude'];
+        _distance = gpsData['distance'];
+
+        debugPrint('✅ GPS Data saved:');
+        debugPrint('   Latitude: $_latitude');
+        debugPrint('   Longitude: $_longitude');
+        debugPrint('   Distance: $_distance m');
+      }
 
       if (mounted) {
         setState(() {
-          _status = 'Foto berhasil diambil!';
+          _status = 'Lokasi terverifikasi! Memproses...';
           _isProcessing = false;
         });
 
-        // ✅ Jika check-out, langsung submit tanpa pilih jadwal
+        // ✅ STEP 3: Lanjut ke dialog jadwal atau submit
         if (widget.isCheckOut) {
           await _submitAttendance(null);
         } else {
-          // ✅ Jika check-in, tampilkan dialog pilih jadwal
           _showScheduleDialog();
         }
       }
@@ -95,6 +158,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       setState(() {
         _status = 'Posisikan wajah Anda di dalam lingkaran';
         _isProcessing = false;
+        _capturedImagePath = null;
+        _latitude = null;
+        _longitude = null;
+        _distance = null;
       });
       _show(false, e.toString().replaceFirst('Exception: ', ''));
     }
@@ -150,6 +217,36 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 20),
+                  
+                  // ✅ Info GPS (opsional, bisa dihapus jika tidak perlu)
+                  if (_distance != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on, 
+                              color: Colors.green.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Lokasi terverifikasi ($_distance m dari kantor)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
@@ -202,6 +299,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                     Navigator.of(dialogContext).pop();
                     setState(() {
                       _capturedImagePath = null;
+                      _latitude = null;
+                      _longitude = null;
+                      _distance = null;
                       _status = 'Posisikan wajah Anda di dalam lingkaran';
                     });
                   },
@@ -254,21 +354,28 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       debugPrint('═══════════════════════════════════════');
       debugPrint('📁 Photo Path: $_capturedImagePath');
       debugPrint('📅 Schedule ID: $scheduleId');
+      debugPrint('📍 Latitude: $_latitude');
+      debugPrint('📍 Longitude: $_longitude');
+      debugPrint('📏 Distance: $_distance m');
       debugPrint('🔄 Is Check-Out: ${widget.isCheckOut}');
       debugPrint('═══════════════════════════════════════');
 
       final provider = Provider.of<AttendanceProvider>(context, listen: false);
 
-      // ✅ KIRIM FILE PATH LANGSUNG KE PROVIDER
+      // ✅ KIRIM FILE PATH + GPS LANGSUNG KE PROVIDER
       Map<String, dynamic> result;
       if (widget.isCheckOut) {
         result = await provider.checkOut(
           photoPath: _capturedImagePath!,
+          latitude: _latitude,   // ✅ GPS
+          longitude: _longitude, // ✅ GPS
         );
       } else {
         result = await provider.checkIn(
           photoPath: _capturedImagePath!,
           scheduleId: scheduleId,
+          latitude: _latitude,   // ✅ GPS
+          longitude: _longitude, // ✅ GPS
         );
       }
 
@@ -283,7 +390,18 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         await Future.delayed(const Duration(milliseconds: 900));
         if (mounted) Navigator.pop(context, true);
       } else {
-        throw Exception(result['message'] ?? 'Absensi gagal');
+        // ✅ Handle error dengan info GPS (jika ada)
+        String errorMessage = result['message'] ?? 'Absensi gagal';
+        
+        // Jika ada data jarak dari backend
+        if (result['data'] != null) {
+          final data = result['data'];
+          if (data['distance'] != null && data['max_radius'] != null) {
+            errorMessage += '\n\nJarak: ${data['distance']}\nRadius maksimal: ${data['max_radius']}';
+          }
+        }
+        
+        throw Exception(errorMessage);
       }
     } catch (e) {
       debugPrint('═══════════════════════════════════════');
@@ -294,6 +412,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       _show(false, e.toString().replaceFirst('Exception: ', ''));
       setState(() {
         _capturedImagePath = null;
+        _latitude = null;
+        _longitude = null;
+        _distance = null;
         _status = 'Gagal menyimpan absensi. Silakan coba lagi.';
       });
     } finally {
@@ -311,6 +432,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         backgroundColor: success ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: Duration(seconds: success ? 2 : 4), // Error lebih lama
       ),
     );
   }
@@ -518,7 +640,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
             const Text(
               '• Pastikan pencahayaan cukup\n'
               '• Lihat langsung ke kamera\n'
-              '• Jangan gunakan masker/kacamata hitam',
+              '• Jangan gunakan masker/kacamata hitam\n'
+              '• Pastikan GPS aktif', // ✅ TAMBAH TIP GPS
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 12,

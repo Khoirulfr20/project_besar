@@ -11,8 +11,8 @@ class ApiService {
   late Dio _externalDio; // ✅ Untuk Python API
 
   // ✅ FIX: Base URL harus jelas
-  static const String laravelBaseUrl = 'http://192.168.202.209:8000/api';
-  static const String pythonBaseUrl = 'http://192.168.202.209:8001';
+  static const String laravelBaseUrl = 'http://10.32.249.186:8000/api';
+  static const String pythonBaseUrl = 'http://10.32.249.186:8001';
 
   void initialize() {
     // Dio untuk Laravel API
@@ -104,9 +104,16 @@ class ApiService {
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers, // ✅ TAMBAH PARAMETER HEADERS
   }) async {
     try {
-      return await _dio.get(path, queryParameters: queryParameters);
+      return await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: headers != null
+            ? Options(headers: headers)
+            : null, // ✅ SUPPORT CUSTOM HEADERS
+      );
     } catch (e) {
       rethrow;
     }
@@ -116,12 +123,16 @@ class ApiService {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers, // ✅ TAMBAH PARAMETER HEADERS
   }) async {
     try {
       return await _dio.post(
         path,
         data: data,
         queryParameters: queryParameters,
+        options: headers != null
+            ? Options(headers: headers)
+            : null, // ✅ SUPPORT CUSTOM HEADERS
       );
     } catch (e) {
       rethrow;
@@ -132,9 +143,17 @@ class ApiService {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers, // ✅ TAMBAH PARAMETER HEADERS
   }) async {
     try {
-      return await _dio.put(path, data: data, queryParameters: queryParameters);
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: headers != null
+            ? Options(headers: headers)
+            : null, // ✅ SUPPORT CUSTOM HEADERS
+      );
     } catch (e) {
       rethrow;
     }
@@ -143,9 +162,16 @@ class ApiService {
   Future<Response> delete(
     String path, {
     Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers, // ✅ TAMBAH PARAMETER HEADERS
   }) async {
     try {
-      return await _dio.delete(path, queryParameters: queryParameters);
+      return await _dio.delete(
+        path,
+        queryParameters: queryParameters,
+        options: headers != null
+            ? Options(headers: headers)
+            : null, // ✅ SUPPORT CUSTOM HEADERS
+      );
     } catch (e) {
       rethrow;
     }
@@ -179,6 +205,7 @@ class ApiService {
     required String filePath,
     required String fieldName,
     Map<String, dynamic>? data,
+    Map<String, String>? headers, // ✅ TAMBAH PARAMETER HEADERS
   }) async {
     try {
       FormData formData = FormData.fromMap({
@@ -189,7 +216,13 @@ class ApiService {
         ),
       });
 
-      return await _dio.post(path, data: formData);
+      return await _dio.post(
+        path,
+        data: formData,
+        options: headers != null
+            ? Options(headers: headers)
+            : null, // ✅ SUPPORT CUSTOM HEADERS
+      );
     } catch (e) {
       rethrow;
     }

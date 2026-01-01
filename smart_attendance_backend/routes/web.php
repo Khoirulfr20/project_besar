@@ -69,6 +69,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Face Recognition (VIEW)
             Route::get('/face', [AdminAttendanceFaceController::class, 'faceRecord'])->name('face.record');
 
+            // ✅ TAMBAHKAN INI - Route GET untuk VIEW halaman registrasi
+            Route::get('/face/register', [AdminAttendanceFaceController::class, 'faceRegisterView'])
+                ->name('face.register.view');
+                
             // Face Recognition (AJAX from Blade)
             Route::post('/face/recognize', [AdminAttendanceFaceController::class, 'faceRecognize'])
                 ->name('face.recognize');

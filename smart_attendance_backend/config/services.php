@@ -13,7 +13,6 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
-
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
@@ -35,13 +34,18 @@ return [
         ],
     ],
 
+    // ✅ FIXED: LBPH Face Recognition Settings
     'face_api' => [
         'url' => env('FACE_API_URL', 'http://127.0.0.1:8001'),
     ],
+    
     'face' => [
-        'confidence_threshold' => env('FACE_CONFIDENCE_THRESHOLD', 0.75),
-        'distance_threshold' => env('FACE_DISTANCE_THRESHOLD', 0.55),
+        // ✅ LBPH menggunakan DISTANCE (bukan confidence)
+        // Semakin KECIL distance = semakin BAGUS match
+        // Default: 30.0 (bisa disesuaikan di .env)
+        'distance_threshold' => env('FACE_DISTANCE_THRESHOLD', 30.0),
+        
+        // ✅ HAPUS confidence_threshold karena tidak dipakai LBPH
+        // 'confidence_threshold' => env('FACE_CONFIDENCE_THRESHOLD', 0.75), // ❌ TIDAK DIPAKAI
     ],
-
-
 ];

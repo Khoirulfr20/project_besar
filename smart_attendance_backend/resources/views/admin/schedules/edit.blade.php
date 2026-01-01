@@ -117,7 +117,7 @@
 
             {{-- PESERTA --}}
             <div class="mb-3 mt-3">
-                <label class="form-label fw-medium">Peserta<span class="badge bg-danger">Min 3 orang</span></label>
+                <label class="form-label fw-medium">Peserta <span class="badge bg-danger">Min 3 orang</span></label>
                 <select name="participant_ids[]" 
                         id="participantsSelectEdit"
                         class="form-select form-select-modern @error('participant_ids') is-invalid @enderror"

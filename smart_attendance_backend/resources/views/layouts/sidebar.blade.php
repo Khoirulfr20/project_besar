@@ -43,9 +43,9 @@
             <div class="collapse" id="recordMenu">
                 <ul class="list-unstyled ps-3">
                     <li>
-                        <a class="nav-link {{ request()->routeIs('admin.attendance.record') ? 'active' : '' }}"
-                        href="{{ route('admin.attendance.record') }}">
-                            <i class="fas fa-pen me-2"></i> Rekam Manual 
+                        <a class="nav-link {{ request()->routeIs('admin.attendance.face.register.view') ? 'active' : '' }}"
+                        href="{{ route('admin.attendance.face.register.view') }}">
+                            <i class="fas fa-pen me-2"></i> Register wajah  
                         </a>
                     </li>
                     <li>

@@ -40,6 +40,8 @@ dependencies:
   path_provider: ^2.1.2
   open_filex: ^4.3.4
 
+  geolocator: ^13.0.2          # ✅ TAMBAH INI
+  
   # Permissions
   permission_handler: ^11.2.0
 

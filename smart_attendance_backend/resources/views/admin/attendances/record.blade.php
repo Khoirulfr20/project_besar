@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Record Attendance - Admin')
+@section('title', 'Rekam Manual')
 
 @section('content')
 
